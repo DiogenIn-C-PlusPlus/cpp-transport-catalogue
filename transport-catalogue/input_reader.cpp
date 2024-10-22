@@ -132,5 +132,19 @@ void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCat
         }
     }
 
-    catalogue.AddBus(names_routes);
+    catalogue.AddBuses(names_routes);
+}
+
+void detail::InputReader::SetBaseRequest(std::istream& input, Catalogue::TransportCatalogue &catalogue)
+{
+   size_t base_request_count;
+   input >> base_request_count >> std::ws;
+
+   for(size_t i = 0; i < base_request_count; ++i)
+   {
+     std::string line;
+     getline(input, line);
+     ParseLine(line);
+ }
+    ApplyCommands(catalogue);
 }

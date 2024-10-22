@@ -10,32 +10,9 @@ using namespace std;
 
 int main()
 {
-    TransportCatalogue catalogue;
-
-    int base_request_count;
-    cin >> base_request_count >> ws;
-
-    {
-        InputReader reader;
-        for (int i = 0; i < base_request_count; ++i)
-        {
-            string line;
-            getline(cin, line);
-            reader.ParseLine(line);
-        }
-        reader.ApplyCommands(catalogue);
-    }
-
-    int stat_request_count;
-    cin >> stat_request_count >> ws;
-    {
-       StatReader reader;
-        for (int i = 0; i < stat_request_count; ++i)
-       {
-        string line;
-        getline(cin, line);
-        reader.ParseAndAddRequest(line);
-       }
-       reader.PrintResults(catalogue, cout);
-    }
+    Catalogue::TransportCatalogue catalogue;
+    detail::InputReader inputreader;
+    inputreader.SetBaseRequest(std::cin, catalogue);
+    detail::StatReader outputreader;
+    outputreader.OutBaseRequest(std::cin, std::cout, catalogue);
 }

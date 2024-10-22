@@ -1,11 +1,11 @@
-#include "stat_reader.h"
+﻿#include "stat_reader.h"
 
 void detail::StatReader::ParseAndAddRequest(std::string_view request)
 {
     save_requests_.push_back(static_cast<std::string>(request));
 }
 
-void detail::StatReader::PrintResults(const Catalogue::TransportCatalogue &transport_catalogue, std::ostream &output) const
+void detail::StatReader::PrintResults(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream &output) const
 {
     for(const auto& request: save_requests_)
     {
@@ -17,22 +17,9 @@ void detail::StatReader::PrintResults(const Catalogue::TransportCatalogue &trans
         }
         if(name_operation == "Bus")
         {
-            PrintFindBuses(transport_catalogue, output, request_search);
+           PrintOutBus(transport_catalogue.AllDataBus(request), output);
         }
     }
-}
-
-void detail::StatReader::PrintFindBuses(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream& output, std::string_view request) const
-{
-        if(transport_catalogue.FindBus(request) == nullptr)
-        {
-          PrintOutBus(request, size_t{},size_t{},double{}, output, 0);
-          return;
-        }
-        size_t count_stops = transport_catalogue.FindBus(request)->stops_in_route_.size();
-        size_t uniq_stops = ComputeUniqStops(transport_catalogue, request);
-        double distance = DistanceInRoute(transport_catalogue, request);
-        PrintOutBus(request, count_stops,uniq_stops,distance, output, 1);
 }
 
 void detail::StatReader::PrintFindStops(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream& output, std::string_view request) const
@@ -44,52 +31,28 @@ void detail::StatReader::PrintFindStops(const Catalogue::TransportCatalogue& tra
         }
         else if(transport_catalogue.GetBusesEnterInRoute(transport_catalogue.FindStop(request)).empty())
         {
-            PrintOutStop({},request, output, 1);
+          PrintOutStop({},request, output, 1);
           return;
         }
         std::set<std::string_view> sorted_numbers_buses = transport_catalogue.GetBusesEnterInRoute(transport_catalogue.FindStop(request));
         PrintOutStop(sorted_numbers_buses, request, output, 2);
 }
 
-double detail::StatReader::DistanceInRoute(const Catalogue::TransportCatalogue& transport_catalogue, std::string_view request) const
-{
-    double dist_in_route = 0;
-    for(size_t i = 0; i +1 <  transport_catalogue.FindBus(request)->stops_in_route_.size(); ++i)
-    {
-     dist_in_route += ComputeDistance(transport_catalogue.FindBus(request)->stops_in_route_[i]->coordinates_, transport_catalogue.FindBus(request)->stops_in_route_[i+1]->coordinates_);
-    }
-    return dist_in_route;
-}
 
-size_t detail::StatReader::ComputeUniqStops(const Catalogue::TransportCatalogue& transport_catalogue, std::string_view request) const
-{
-    std::unordered_set<std::string> result;
-    for(const auto& stop: transport_catalogue.FindBus(request)->stops_in_route_)
-    {
-        result.insert(stop->name_stop_);
-    }
-    return result.size();
-}
-
-void detail::StatReader::PrintOutBus(std::string_view name_bus, size_t count_stops, size_t uniq_stops, double distance, std::ostream& output, size_t number_out) const
+void detail::StatReader::PrintOutBus(Catalogue::TransportCatalogue::OutPutBus data_bus, std::ostream& output) const
 {
     using namespace std::literals;
-    switch (number_out)
+    if(data_bus.count_stops_ == 0)
     {
-      case 0:
-       {
-        output <<"Bus " << name_bus <<": "s << "not found"s << std::endl;
-        break;
-       }
-     case 1:
-      {
-        output << "Bus " << name_bus <<": "s <<count_stops << " stops on route, "s << uniq_stops << " unique stops, "s << std::setprecision(6) <<distance << " route length"s << std::endl;
-        break;
-      }
+        output <<"Bus " << data_bus.name_bus_ <<": "s << "not found"s << std::endl;
+    }
+    else
+    {
+         output << "Bus " << data_bus.name_bus_ <<": "s <<data_bus.count_stops_ << " stops on route, "s << data_bus.uniq_stops_ << " unique stops, "s << std::setprecision(6) << data_bus.lenght_ << " route length"s << std::endl;
     }
 }
-
-void detail::StatReader::PrintOutStop(const std::set<std::string_view> number_buses, std::string_view name_stop, std::ostream &output, size_t number_operation) const
+// Честно признаюсь так и не понял, как передать суда константный указатель просто const Stop*, а внутри уже вызывать метод?
+void detail::StatReader::PrintOutStop(const std::set<std::string_view>& number_buses, std::string_view name_stop, std::ostream &output, size_t number_operation) const
 {
     using namespace std::literals;
     switch (number_operation)
@@ -107,7 +70,6 @@ void detail::StatReader::PrintOutStop(const std::set<std::string_view> number_bu
     case 2:
      {
       output <<"Stop " << name_stop <<": buses"s;
-
       for(const auto& number_bus: number_buses)
       {
           output << " " << number_bus;
@@ -116,4 +78,18 @@ void detail::StatReader::PrintOutStop(const std::set<std::string_view> number_bu
       break;
      }
     }
+}
+
+void detail::StatReader::OutBaseRequest(std::istream &in, std::ostream &out, const Catalogue::TransportCatalogue& transport_catalogue)
+{
+    size_t stat_request_count;
+    in >> stat_request_count >> std::ws;
+
+    for (size_t i = 0; i < stat_request_count; ++i)
+   {
+     std::string line;
+     std::getline(in, line);
+     ParseAndAddRequest(line);
+     }
+     PrintResults(transport_catalogue, out);
 }

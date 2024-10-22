@@ -31,17 +31,10 @@ struct CommandDescription
 class InputReader
 {
 public:
-    /**
-     * Парсит строку в структуру CommandDescription и сохраняет результат в commands_
-     */
-    void ParseLine(std::string_view line);
-
-    /**
-     * Наполняет данными транспортный справочник, используя команды из commands_
-     */
-    void ApplyCommands(Catalogue::TransportCatalogue& catalogue) const; // Связь между парсингом и справочником
-
+    void SetBaseRequest(std::istream& input, Catalogue::TransportCatalogue& catalogue);
 private:
+    void ParseLine(std::string_view line); // Парсит строку в структуру CommandDescription и сохраняет результат в commands_
+    void ApplyCommands(Catalogue::TransportCatalogue& catalogue) const; // Связь между парсингом и справочником //  // Наполняет данными транспортный справочник, используя команды из commands_
     std::vector<CommandDescription> commands_;
 };
 

@@ -2,7 +2,8 @@
 
 #include <cmath>
 
-struct Coordinates {
+struct Coordinates
+{
     double lat;
     double lng;
     bool operator==(const Coordinates& other) const {
@@ -13,7 +14,11 @@ struct Coordinates {
     }
 };
 
-inline double ComputeDistance(Coordinates from, Coordinates to) {
+
+
+inline double ComputeDistance(Coordinates from, Coordinates to)
+{
+    const size_t radius_earth = 6371000;
     using namespace std;
     if (from == to) {
         return 0;
@@ -21,5 +26,5 @@ inline double ComputeDistance(Coordinates from, Coordinates to) {
     static const double dr = 3.1415926535 / 180.;
     return acos(sin(from.lat * dr) * sin(to.lat * dr)
                 + cos(from.lat * dr) * cos(to.lat * dr) * cos(abs(from.lng - to.lng) * dr))
-        * 6371000;
+        * radius_earth;
 }
