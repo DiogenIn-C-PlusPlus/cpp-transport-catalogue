@@ -1,4 +1,4 @@
-#include "input_reader.h"
+﻿#include "input_reader.h"
 
 #include <algorithm>
 #include <cassert>
@@ -119,7 +119,7 @@ void detail::InputReader::ParseLine(std::string_view line)
 
 void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCatalogue& catalogue) const
 {
-    std::vector<std::pair<std::string,std::vector<std::string_view>>> names_routes;
+    std::vector<Catalogue::TransportCatalogue::BusIncludeNameStops> names_and_routes;
     for(const CommandDescription& element: commands_)
     {
         if(element.command == "Stop")
@@ -128,11 +128,10 @@ void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCat
         }
         if(element.command == "Bus")
         {
-             names_routes.push_back(std::make_pair(element.id, ParseRoute(element.description)));
+             names_and_routes.push_back(Catalogue::TransportCatalogue::BusIncludeNameStops{element.id, ParseRoute(element.description)});
         }
     }
-
-    catalogue.AddBuses(names_routes);
+    catalogue.AddBuses(std::move(names_and_routes));
 }
 
 void detail::InputReader::SetBaseRequest(std::istream& input, Catalogue::TransportCatalogue &catalogue)

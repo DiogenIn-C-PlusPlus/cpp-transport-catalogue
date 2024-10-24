@@ -20,7 +20,6 @@ private:
     void PrintFindStops(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream& output, std::string_view request) const;
     void PrintResults(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream& output) const;
     void PrintOutBus(Catalogue::TransportCatalogue::OutPutBus data_bus, std::ostream& output) const;
-    void PrintOutStop(const std::set<std::string_view>& number_buses, std::string_view name_stop, std::ostream& output, size_t number_operation) const;
     std::deque<std::string> save_requests_;
 };
 }

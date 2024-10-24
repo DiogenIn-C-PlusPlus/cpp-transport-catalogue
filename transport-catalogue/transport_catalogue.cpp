@@ -6,13 +6,13 @@ void Catalogue::TransportCatalogue::AddStop(const std::string& name_stop, Coordi
     check_stop_[stops_.back().name_stop_] = &stops_.back();
 }
 
-void Catalogue::TransportCatalogue::AddBuses(const std::vector<std::pair<std::string, std::vector<std::string_view>>> &names_routes)
+void Catalogue::TransportCatalogue::AddBuses(std::vector<BusIncludeNameStops> names_and_routes)
 {
-    for(const auto& element: names_routes)
+    for(const auto& element: names_and_routes)
     {
      Bus bus;
-     bus.name_bus_ = element.first;
-    for(std::string_view stop: element.second)
+     bus.name_bus_ = element.name_bus_;
+    for(std::string_view stop: element.route_)
       {
         bus.stops_in_route_.push_back(check_stop_[stop]);
       }
@@ -52,11 +52,12 @@ void Catalogue::TransportCatalogue::AddStopIncludeOtherRoutes(const std::vector<
 // Что значит вернуть константный указатель, просто сделать проверку на наличие stop, если нету nullptr, а если есть const Stop* вернуть? Просто смысл делать просто проверку на наличие в отдельном методе или не так понял?)
 std::set<std::string_view> Catalogue::TransportCatalogue::GetBusesEnterInRoute(const Stop *stop) const
 {
-    if(stop_enter_in_routes_.count(stop) == 0)
+    auto temp = stop_enter_in_routes_.find(stop);
+    if(temp == stop_enter_in_routes_.end())
     {
         return {};
     }
-    return stop_enter_in_routes_.at(stop);
+    return temp->second;
 }
 
 double Catalogue::TransportCatalogue::DistanceInRoute(std::string_view request) const
