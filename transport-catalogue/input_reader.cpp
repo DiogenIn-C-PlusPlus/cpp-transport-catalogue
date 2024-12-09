@@ -1,4 +1,4 @@
-﻿#include "input_reader.h"
+#include "input_reader.h"
 
 #include <algorithm>
 #include <cassert>
@@ -76,7 +76,7 @@ std::vector<std::string_view> ParseRoute(std::string_view route)
         return Split(route, '>');
     }
 
-    auto stops = Split(route, '-');
+    auto stops = Split(route, '-'); // Туда и обратно
     std::vector<std::string_view> results(stops.begin(), stops.end());
     results.insert(results.end(), std::next(stops.rbegin()), stops.rend());
 
@@ -102,10 +102,18 @@ detail::CommandDescription ParseCommandDescription(std::string_view line)
     {
         return {};
     }
+
+    auto take_distance = line.find_first_of(',', line.find_first_of(',')+1);
+    if(take_distance == line.npos)
+    {
+        return  {std::string(line.substr(0, space_pos)),
+                    std::string(line.substr(not_space, colon_pos - not_space)),
+                    std::string(line.substr(colon_pos + 1)), {}};
+    }
     // Ключевое слово (команда), Название остановки, Параметры её
     return {std::string(line.substr(0, space_pos)),
             std::string(line.substr(not_space, colon_pos - not_space)),
-            std::string(line.substr(colon_pos + 1))};
+            std::string(line.substr(colon_pos + 1, take_distance)), std::string(line.substr(take_distance + 1))};
 }
 
 void detail::InputReader::ParseLine(std::string_view line)
@@ -117,24 +125,48 @@ void detail::InputReader::ParseLine(std::string_view line)
     }
 }
 
+//Принадрежность к классу убрать detail::InputReader::
+// Или создавать тестовые классы с префиксом текст и клонировать код и тестить может так лучше будет
+std::vector<Catalogue::TransportCatalogue::FinishStopDist> ParseDistane(std::string_view text)
+{
+    std::vector<Catalogue::TransportCatalogue::FinishStopDist> distances_for_stops;
+    std::vector<std::string_view> dist_stop = Split(text,',');
+    for(const auto& line: dist_stop)
+    {
+        auto not_space = line.find_first_not_of(' ');
+        auto number_end = line.find('m', not_space);
+        double distance = std::stod(static_cast<std::string>(line.substr(not_space, number_end)));
+
+        auto start_name_stop = line.find_first_not_of(' ', line.find("to") + 2);
+        std::string_view name_stop = line.substr(start_name_stop);
+        distances_for_stops.push_back(Catalogue::TransportCatalogue::FinishStopDist{name_stop, distance});
+    }
+    return distances_for_stops;
+}
+
 void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCatalogue& catalogue) const
 {
     std::vector<Catalogue::TransportCatalogue::BusIncludeNameStops> names_and_routes;
+    std::vector<Catalogue::TransportCatalogue::DistanceWithStops> name_stop_and_dist_next_stop;
     for(const CommandDescription& element: commands_)
     {
         if(element.command == "Stop")
         {
             catalogue.AddStop(element.id, ParseCoordinates(element.description));
+            if(!element.distance_to_stop.empty())
+            {
+               name_stop_and_dist_next_stop.push_back(Catalogue::TransportCatalogue::DistanceWithStops{element.id,ParseDistane(element.distance_to_stop)});
+            }
         }
         if(element.command == "Bus")
         {
              names_and_routes.push_back(Catalogue::TransportCatalogue::BusIncludeNameStops{element.id, ParseRoute(element.description)});
         }
     }
-    catalogue.AddBuses(std::move(names_and_routes));
+    catalogue.AddBuses(std::move(names_and_routes), std::move(name_stop_and_dist_next_stop)); // Передаем сюда вектор с расстоянием между остановками, там делаем новую функцию и оттуда добавляем в хранилище
 }
 
-void detail::InputReader::SetBaseRequest(std::istream& input, Catalogue::TransportCatalogue &catalogue)
+void detail::InputReader::SetBaseRequest(std::istream& input, Catalogue::TransportCatalogue& catalogue)
 {
    size_t base_request_count;
    input >> base_request_count >> std::ws;
@@ -144,6 +176,6 @@ void detail::InputReader::SetBaseRequest(std::istream& input, Catalogue::Transpo
      std::string line;
      getline(input, line);
      ParseLine(line);
- }
+    }
     ApplyCommands(catalogue);
 }
