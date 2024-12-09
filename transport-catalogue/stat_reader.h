@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <algorithm>
 #include <iomanip>
@@ -19,7 +19,7 @@ private:
     void ParseAndAddRequest(std::string_view request);
     void PrintFindStops(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream& output, std::string_view request) const;
     void PrintResults(const Catalogue::TransportCatalogue& transport_catalogue, std::ostream& output) const;
-    void PrintOutBus(Catalogue::TransportCatalogue::OutPutBus data_bus, std::ostream& output) const;
+    void PrintOutBus(Catalogue::TransportCatalogue::BusStatistics data_bus, std::ostream& output) const;
     std::deque<std::string> save_requests_;
 };
 }
