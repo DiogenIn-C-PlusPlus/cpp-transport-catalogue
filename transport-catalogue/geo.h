@@ -14,8 +14,6 @@ struct Coordinates
     }
 };
 
-
-
 inline double ComputeDistance(Coordinates from, Coordinates to)
 {
     const size_t radius_earth = 6371000;
