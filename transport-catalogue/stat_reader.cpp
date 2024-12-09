@@ -1,4 +1,4 @@
-﻿#include "stat_reader.h"
+#include "stat_reader.h"
 
 void detail::StatReader::ParseAndAddRequest(std::string_view request)
 {
@@ -17,7 +17,7 @@ void detail::StatReader::PrintResults(const Catalogue::TransportCatalogue& trans
         }
         if(name_operation == "Bus")
         {
-           PrintOutBus(transport_catalogue.AllDataBus(request), output);
+           PrintOutBus(transport_catalogue.GetBusStatistics(request_search), output);
         }
     }
 }
@@ -45,7 +45,7 @@ void detail::StatReader::PrintFindStops(const Catalogue::TransportCatalogue& tra
 }
 
 
-void detail::StatReader::PrintOutBus(Catalogue::TransportCatalogue::OutPutBus data_bus, std::ostream& output) const
+void detail::StatReader::PrintOutBus(Catalogue::TransportCatalogue::BusStatistics data_bus, std::ostream& output) const
 {
     using namespace std::literals;
     if(data_bus.count_stops_ == 0)
@@ -54,7 +54,7 @@ void detail::StatReader::PrintOutBus(Catalogue::TransportCatalogue::OutPutBus da
     }
     else
     {
-         output << "Bus " << data_bus.name_bus_ <<": "s <<data_bus.count_stops_ << " stops on route, "s << data_bus.uniq_stops_ << " unique stops, "s << std::setprecision(6) << data_bus.length_ << " route length"s << std::endl;
+         output << "Bus " << data_bus.name_bus_ <<": "s <<data_bus.count_stops_ << " stops on route, "s << data_bus.uniq_stops_ << " unique stops, "s << std::setprecision(6) << data_bus.length_ << " route length, "s << std::setprecision(6) << data_bus.curvature_ << " curvature"s << std::endl;
     }
 }
 
