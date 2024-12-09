@@ -26,6 +26,7 @@ struct CommandDescription
     std::string command;      // Название команды
     std::string id;           // id маршрута или остановки
     std::string description;  // Параметры команды
+    std::string distance_to_stop; // Для дистанциии до остановки
 };
 
 class InputReader
