@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iterator>
 #include <iostream>
+#include <numeric>
 /**
  * Парсит строку вида "10.123,  -30.1837" и возвращает пару координат (широта, долгота)
  */
@@ -125,8 +126,6 @@ void detail::InputReader::ParseLine(std::string_view line)
     }
 }
 
-//Принадрежность к классу убрать detail::InputReader::
-// Или создавать тестовые классы с префиксом текст и клонировать код и тестить может так лучше будет
 std::vector<Catalogue::TransportCatalogue::FinishStopDist> ParseDistane(std::string_view text)
 {
     std::vector<Catalogue::TransportCatalogue::FinishStopDist> distances_for_stops;
@@ -147,7 +146,7 @@ std::vector<Catalogue::TransportCatalogue::FinishStopDist> ParseDistane(std::str
 void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCatalogue& catalogue) const
 {
     std::vector<Catalogue::TransportCatalogue::BusIncludeNameStops> names_and_routes;
-    std::vector<Catalogue::TransportCatalogue::DistanceWithStops> name_stop_and_dist_next_stop;
+    std::unordered_map<std::pair<std::string, std::string>, double, HasherDistStop> name_stop_and_dist_between_;
     for(const CommandDescription& element: commands_)
     {
         if(element.command == "Stop")
@@ -155,7 +154,11 @@ void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCat
             catalogue.AddStop(element.id, ParseCoordinates(element.description));
             if(!element.distance_to_stop.empty())
             {
-               name_stop_and_dist_next_stop.push_back(Catalogue::TransportCatalogue::DistanceWithStops{element.id,ParseDistane(element.distance_to_stop)});
+                for(const auto& stop_dist: ParseDistane(element.distance_to_stop))
+                {
+                    std::pair<std::string, std::string> key = std::make_pair(element.id, static_cast<std::string>(stop_dist.name_stop_)); // Здесь element.id инвалидается, теперь везде string, фу.... :)
+                    name_stop_and_dist_between_[key] = stop_dist.distance_to_next_;
+                }
             }
         }
         if(element.command == "Bus")
@@ -163,7 +166,35 @@ void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCat
              names_and_routes.push_back(Catalogue::TransportCatalogue::BusIncludeNameStops{element.id, ParseRoute(element.description)});
         }
     }
-    catalogue.AddBuses(std::move(names_and_routes), std::move(name_stop_and_dist_next_stop)); // Передаем сюда вектор с расстоянием между остановками, там делаем новую функцию и оттуда добавляем в хранилище
+    for(const auto& name_bus_and_route: names_and_routes)
+    {
+        catalogue.AddBus(std::move(name_bus_and_route.name_bus_), name_bus_and_route.route_, SetDistanceForBus(name_bus_and_route, name_stop_and_dist_between_));
+    }
+}
+
+double detail::InputReader::SetDistanceForBus(const Catalogue::TransportCatalogue::BusIncludeNameStops& name_bus_and_route, const std::unordered_map<std::pair<std::string, std::string>, double, HasherDistStop> &names_stops_and_dist_beetwen) const
+{
+    double result = 0;
+    for(size_t i = 0; i + 1 < name_bus_and_route.route_.size(); ++i)
+    {
+         std::string start_stop = static_cast<std::string>(name_bus_and_route.route_[i]);
+         std::string finish_stop = static_cast<std::string>(name_bus_and_route.route_[i + 1]);
+         std::pair<std::string, std::string> check_first = std::make_pair(start_stop, finish_stop);
+         std::pair<std::string, std::string> check_second = std::make_pair(finish_stop, start_stop);
+         auto key_first = names_stops_and_dist_beetwen.find(check_first);
+         auto key_second = names_stops_and_dist_beetwen.find(check_second);
+         if(key_first != names_stops_and_dist_beetwen.end())
+         {
+             result += names_stops_and_dist_beetwen.at(check_first);
+             continue;
+         }
+         if(key_second != names_stops_and_dist_beetwen.end())
+         {
+             result += names_stops_and_dist_beetwen.at(check_second);
+             continue;
+         }
+    }
+    return result;
 }
 
 void detail::InputReader::SetBaseRequest(std::istream& input, Catalogue::TransportCatalogue& catalogue)
