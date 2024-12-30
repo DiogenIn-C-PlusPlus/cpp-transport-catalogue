@@ -35,7 +35,7 @@ void detail::StatReader::PrintFindStops(const Catalogue::TransportCatalogue& tra
           output <<"Stop " << request <<": "s << "no buses"s << std::endl;
           return;
         }
-        std::set<std::string_view> sorted_numbers_buses = *transport_catalogue.GetBusesEnterInRoute(transport_catalogue.FindStop(request)); // Добавил для читабельности кода, чтобы было понятно, что они отсортированные
+        std::set<std::string> sorted_numbers_buses = *transport_catalogue.GetBusesEnterInRoute(transport_catalogue.FindStop(request)); // Добавил для читабельности кода, чтобы было понятно, что они отсортированные
         output <<"Stop " << request <<": buses"s;
         for(const auto& number_bus: sorted_numbers_buses)
         {
