@@ -11,11 +11,12 @@ void Catalogue::TransportCatalogue::AddBus(std::string name_bus, const std::vect
      std::vector<Stop*> stops;
      for(std::string_view name_stop: route)
      {
-         stops.push_back(check_stop_[name_stop]);
+         Stop* temp_stop = check_stop_[name_stop];
+         stops.push_back(temp_stop);
+         AddStopIncludeOtherRoutes(temp_stop, name_bus);
      }
      buses_.push_back(Bus{name_bus, stops});
      check_bus_[buses_.back().name_bus_] = &buses_.back();
-     AddStopIncludeOtherRoutes(buses_.back().stops_in_route_, buses_.back().name_bus_);
      bus_name_and_dist_[buses_.back().name_bus_] = distance;
 }
 
@@ -39,22 +40,19 @@ const Catalogue::TransportCatalogue::Bus* Catalogue::TransportCatalogue::FindBus
     return temp->second;
 }
 
-void Catalogue::TransportCatalogue::AddStopIncludeOtherRoutes(const std::vector<Stop*>& stops, std::string_view name_bus)
+void Catalogue::TransportCatalogue::AddStopIncludeOtherRoutes(const Stop* stop, const std::string& name_bus)
 {
-    for(Stop* stop: stops)
-    {
         stop_enter_in_routes_[stop].insert(name_bus);
-    }
 }
 
-const std::unique_ptr<std::set<std::string_view>> Catalogue::TransportCatalogue::GetBusesEnterInRoute(const Stop* stop) const
+const std::unique_ptr<std::set<std::string>> Catalogue::TransportCatalogue::GetBusesEnterInRoute(const Stop* stop) const
 {
     auto temp = stop_enter_in_routes_.find(stop);
     if(temp == stop_enter_in_routes_.end())
     {
         return nullptr;
     }
-    return std::make_unique<std::set<std::string_view>>(temp->second);
+    return std::make_unique<std::set<std::string>>(temp->second);
 }
 
 double Catalogue::TransportCatalogue::DistanceInRouteGeo(std::string_view request) const
