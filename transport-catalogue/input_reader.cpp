@@ -126,9 +126,9 @@ void detail::InputReader::ParseLine(std::string_view line)
     }
 }
 
-std::vector<Catalogue::TransportCatalogue::FinishStopDist> ParseDistane(std::string_view text)
+std::unordered_map<std::string, double> ParseDistane(std::string_view text)
 {
-    std::vector<Catalogue::TransportCatalogue::FinishStopDist> distances_for_stops;
+    std::unordered_map<std::string, double> distances_for_stops;
     std::vector<std::string_view> dist_stop = Split(text,',');
     for(const auto& line: dist_stop)
     {
@@ -137,8 +137,8 @@ std::vector<Catalogue::TransportCatalogue::FinishStopDist> ParseDistane(std::str
         double distance = std::stod(static_cast<std::string>(line.substr(not_space, number_end)));
 
         auto start_name_stop = line.find_first_not_of(' ', line.find("to") + 2);
-        std::string_view name_stop = line.substr(start_name_stop);
-        distances_for_stops.push_back(Catalogue::TransportCatalogue::FinishStopDist{name_stop, distance});
+        std::string name_stop = static_cast<std::string>(line.substr(start_name_stop));
+        distances_for_stops[name_stop] = distance;
     }
     return distances_for_stops;
 }
@@ -154,10 +154,10 @@ void detail::InputReader::ApplyCommands([[maybe_unused]] Catalogue::TransportCat
             catalogue.AddStop(element.id, ParseCoordinates(element.description));
             if(!element.distance_to_stop.empty())
             {
-                for(const auto& stop_dist: ParseDistane(element.distance_to_stop))
+                for(const auto& [name_stop, dist] : ParseDistane(element.distance_to_stop))
                 {
-                    std::pair<std::string, std::string> key = std::make_pair(element.id, static_cast<std::string>(stop_dist.name_stop_)); // Здесь element.id инвалидается, теперь везде string, фу.... :)
-                    name_stop_and_dist_between_[key] = stop_dist.distance_to_next_;
+                    std::pair<std::string, std::string> key = std::make_pair(element.id, name_stop);
+                    name_stop_and_dist_between_[key] = dist;
                 }
             }
         }
