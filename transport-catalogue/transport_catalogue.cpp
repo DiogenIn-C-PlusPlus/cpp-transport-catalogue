@@ -1,4 +1,5 @@
-#include "transport_catalogue.h"
+﻿#include "transport_catalogue.h"
+#include <iostream>
 
 void Catalogue::TransportCatalogue::AddStop(const std::string& name_stop, Coordinates coordinates)
 {
@@ -6,7 +7,7 @@ void Catalogue::TransportCatalogue::AddStop(const std::string& name_stop, Coordi
     check_stop_[stops_.back().name_stop_] = &stops_.back();
 }
 
-void Catalogue::TransportCatalogue::AddBus(std::string name_bus, const std::vector<std::string_view>& route, double distance)
+void Catalogue::TransportCatalogue::AddBus(std::string name_bus, const std::vector<std::string>& route, double distance)
 {
      std::vector<Stop*> stops;
      for(std::string_view name_stop: route)
@@ -20,7 +21,7 @@ void Catalogue::TransportCatalogue::AddBus(std::string name_bus, const std::vect
      bus_name_and_dist_[buses_.back().name_bus_] = distance;
 }
 
-const Catalogue::TransportCatalogue::Stop* Catalogue::TransportCatalogue::FindStop(std::string_view name_stop) const
+const Stop* Catalogue::TransportCatalogue::FindStop(std::string_view name_stop) const
 {
     auto temp = check_stop_.find(name_stop);
     if(temp == check_stop_.end())
@@ -30,7 +31,7 @@ const Catalogue::TransportCatalogue::Stop* Catalogue::TransportCatalogue::FindSt
     return temp->second;
 }
 
-const Catalogue::TransportCatalogue::Bus* Catalogue::TransportCatalogue::FindBus(std::string_view name_bus) const
+const Bus* Catalogue::TransportCatalogue::FindBus(std::string_view name_bus) const
 {
     auto temp =check_bus_.find(name_bus);
     if(temp == check_bus_.end())
@@ -75,16 +76,26 @@ size_t Catalogue::TransportCatalogue::ComputeUniqStops(std::string_view request)
     return result.size();
 }
 
-Catalogue::TransportCatalogue::BusStatistics Catalogue::TransportCatalogue::GetBusStatistics(std::string_view request) const
+double Catalogue::TransportCatalogue::GetDistanceFromRequests(std::string_view request) const
 {
-        if(FindBus(request) == nullptr)
-        {
-            return BusStatistics{request,0,0,0,0};
-        }
-        size_t count_stops = FindBus(request)->stops_in_route_.size();
-        size_t uniq_stops = ComputeUniqStops(request);
-        double distance = bus_name_and_dist_.at(request);
-        double curvature = distance / DistanceInRouteGeo(request);
-        return BusStatistics{request,count_stops, uniq_stops, distance, curvature};
+    if(bus_name_and_dist_.find(request) == bus_name_and_dist_.end())
+    {
+        return -1;
+    }
+    return bus_name_and_dist_.at(request);
+}
+
+void Catalogue::TransportCatalogue::SetRoudtripRoute(std::pair<std::string, bool> name_answer, bool first_last_stop)
+{
+    check_roudtrip_bus_and_equal_first_last_stop[name_answer.first] = std::pair<bool, bool>(name_answer.second, first_last_stop);
+}
+
+const std::unique_ptr<std::unordered_map<std::string, std::pair<bool, bool>>> Catalogue::TransportCatalogue::GetRoudtripRoute() const
+{
+    if(check_roudtrip_bus_and_equal_first_last_stop.empty())
+    {
+        return nullptr;
+    }
+    return std::make_unique<std::unordered_map<std::string, std::pair<bool, bool>>>(check_roudtrip_bus_and_equal_first_last_stop);
 }
 
