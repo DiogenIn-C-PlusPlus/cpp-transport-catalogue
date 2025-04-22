@@ -1,4 +1,4 @@
-﻿#include "transport_catalogue.h"
+#include "transport_catalogue.h"
 #include <iostream>
 
 void Catalogue::TransportCatalogue::AddStop(const std::string& name_stop, Coordinates coordinates)
@@ -99,3 +99,29 @@ const std::unique_ptr<std::unordered_map<std::string, std::pair<bool, bool>>> Ca
     return std::make_unique<std::unordered_map<std::string, std::pair<bool, bool>>>(check_roudtrip_bus_and_equal_first_last_stop);
 }
 
+std::optional<BusStatistics> Catalogue::TransportCatalogue::GetBusStatistics(const std::string_view& request) const
+{
+    if(FindBus(request) == nullptr)
+    {
+        return std::nullopt;
+    }
+    size_t count_stops = FindBus(request)->stops_in_route_.size();
+    size_t uniq_stops = ComputeUniqStops(request);
+    double distance = GetDistanceFromRequests(request);
+    double curvature = distance / DistanceInRouteGeo(request);
+    return BusStatistics{request,count_stops, uniq_stops, distance, curvature};
+}
+
+const std::unique_ptr<std::set<std::string>> Catalogue::TransportCatalogue::GetBusesByStop(const std::string_view& stop_name) const
+{
+    if(FindStop(stop_name) == nullptr)
+    {
+        return nullptr;
+    }
+    else if(GetBusesEnterInRoute(FindStop(stop_name)) == nullptr)
+    {
+        std::set<std::string> empty_object{}; //  Насколько это нормально возвращаю указатель на временный объект
+        return  std::make_unique<std::set<std::string>>(empty_object);
+    }
+    return GetBusesEnterInRoute(FindStop(stop_name));
+}
