@@ -1,13 +1,41 @@
-﻿#include "json_reader.h"
+#include "json_reader.h"
 
 // ==== Вход в обработку
 
-detail::Json_reader::Json_reader(json::Document doc)
+
+// Перенес в виде константы статической, мне компилятор выдает предупреждение non-POD, я прочитал это больше относится к библиотекам
+// мол, что это может привести к лишней трате ресурсов и при этом не использовано (Дают совет, просто изменить настройки компилятора)
+
+  static const std::string stop = "Stop";
+  static const std::string type = "type";
+  static const std::string name = "name";
+  static const std::string latitude = "latitude";
+  static const std::string longitude = "longitude";
+  static const std::string road_distances = "road_distances";
+  static const std::string id = "id";
+  static const std::string bus = "Bus";
+  static const std::string stops = "stops";
+  static const std::string is_roundtrip = "is_roundtrip";
+  static const std::string width = "width";
+  static const std::string height = "height";
+  static const std::string padding = "padding";
+  static const std::string stop_radius = "stop_radius";
+  static const std::string line_width = "line_width";
+  static const std::string bus_label_font_size = "bus_label_font_size";
+  static const std::string bus_label_offset = "bus_label_offset";
+  static const std::string stop_label_font_size = "stop_label_font_size";
+  static const std::string stop_label_offset = "stop_label_offset";
+  static const std::string underlayer_color = "underlayer_color";
+  static const std::string underlayer_width = "underlayer_width";
+  static const std::string color_palette  = "color_palette";
+  static const std::string map = "Map";
+
+detail::JSONreader::JSONreader(json::Document doc)
     : requests_(doc.GetRoot())
     {}
 
 
-void detail::Json_reader::SetInputRequests(Catalogue::TransportCatalogue& catalogue, std::string key_input)
+void detail::JSONreader::SetInputRequests(Catalogue::TransportCatalogue& catalogue, std::string key_input)
 {
     try
     {
@@ -17,12 +45,12 @@ void detail::Json_reader::SetInputRequests(Catalogue::TransportCatalogue& catalo
         }
     }  catch (std::logic_error& error)
     {
-        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" == Address: json_reader -> SetInputRequests" <<std::endl;
+        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" == Address: JSONreader -> SetInputRequests" <<std::endl;
     }
     SetInputDataBase(requests_.GetRoot().AsMap().at(key_input).AsArray(), catalogue);
 }
 
-void detail::Json_reader::SetOutPutRequests(RequestHandler facade, std::string key_output, std::ostream &output)
+void detail::JSONreader::SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const std::string key_output, std::ostream &output)
 {
     try
     {
@@ -32,12 +60,12 @@ void detail::Json_reader::SetOutPutRequests(RequestHandler facade, std::string k
         }
     }  catch (std::logic_error& error)
     {
-        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" == Address: json_reader -> SetOutPutRequests" <<std::endl;
+        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" == Address: JSONreader -> SetOutPutRequests" <<std::endl;
     }
-    SetOutPutDataBase(requests_.GetRoot().AsMap().at(key_output).AsArray(), facade , output);
+    SetOutPutDataBase(requests_.GetRoot().AsMap().at(key_output).AsArray(), catalogue , map_renderrer, output);
 }
 
-void detail::Json_reader::SetInputParametrsPicture(renderer::MapRenderer& map_renderer, const std::string& key_input)
+void detail::JSONreader::SetInputParametersPicture(renderer::MapRenderer& map_renderer, const std::string& key_input)
 {
     try
     {
@@ -47,25 +75,25 @@ void detail::Json_reader::SetInputParametrsPicture(renderer::MapRenderer& map_re
         }
     }  catch (std::logic_error& error)
     {
-        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" or \"render_settings\" == Address: json_reader -> SetInputParametrsPicture" << std::endl;
+        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" or \"render_settings\" == Address: JSONreader -> SetInputParametrsPicture" << std::endl;
     }
-    LoadParametrsPicture(requests_.GetRoot().AsMap().at(key_input).AsMap(), map_renderer);
+    LoadParametersPicture(requests_.GetRoot().AsMap().at(key_input).AsMap(), map_renderer);
 }
 
 // =================  Ввод =========================
 
-void detail::Json_reader::SetInputDataBase(const json::Array& array, Catalogue::TransportCatalogue &catalogue) // Можно попробовать через move (нужен один раз же)
+void detail::JSONreader::SetInputDataBase(const json::Array& array, Catalogue::TransportCatalogue &catalogue) // Можно попробовать через move (нужен один раз же)
 {
     for(const json::Node& element : array)
     {
         try
         {
             json::Dict bus_or_stop = element.AsMap();
-            if(bus_or_stop.find(key_word_bus_.type) != bus_or_stop.end() && bus_or_stop.at(key_word_bus_.type) == key_word_bus_.bus) // Нужно смотреть, что кидает at и делать try catch
+            if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == bus) // Нужно смотреть, что кидает at и делать try catch
             {
                 TakeBusesInfo(bus_or_stop, catalogue); // Думаем насчет move
             }
-            else if(bus_or_stop.find(key_word_stop_.type) != bus_or_stop.end() && bus_or_stop.at(key_word_stop_.type) == key_word_stop_.stop)
+            else if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == stop)
             {
                 TakeStopsInfo(bus_or_stop, catalogue);  // Думаем насчет move
             }
@@ -73,10 +101,10 @@ void detail::Json_reader::SetInputDataBase(const json::Array& array, Catalogue::
         catch (std::out_of_range& error)
         {
              std::cout << error.what() << "In input data have place where key type or key words Bus and Stop abcent";
-             std::cout << "Look input data file. Adress: Json_reader -> SetInputDataBase" << std::endl;
+             std::cout << "Look input data file. Adress: JSONreader -> SetInputDataBase" << std::endl;
         } catch (...)
         {
-            std::cout << "Unknown error === Address: json_reader -> SetInputDataBase";
+            std::cout << "Unknown error === Address: JSONreader -> SetInputDataBase";
         }
     }
     for(const auto& name_bus_and_route : names_and_routes_)
@@ -87,28 +115,28 @@ void detail::Json_reader::SetInputDataBase(const json::Array& array, Catalogue::
     dist_between_stops_.clear(); // Очищаем, чтобы не занимать память - больше не понадобиться
 }
 
-void detail::Json_reader::TakeStopsInfo(const json::Dict& information_about_stop, Catalogue::TransportCatalogue& catalogue)
+void detail::JSONreader::TakeStopsInfo(const json::Dict& information_about_stop, Catalogue::TransportCatalogue& catalogue)
 {
     Stop stop;
     for(const auto& [key_word, Node] : information_about_stop)
     {
-        if(key_word_stop_.type == key_word)
+        if(type == key_word)
         {
             continue;
         }
-        else if(key_word_stop_.name == key_word)
+        else if(name == key_word)
         {
             stop.name_stop_ = Node.AsString();
         }
-        else if(key_word_stop_.latitude == key_word)
+        else if(latitude == key_word)
         {
             stop.coordinates_.lat = Node.AsDouble();
         }
-        else if(key_word_stop_.longitude == key_word)
+        else if(longitude == key_word)
         {
             stop.coordinates_.lng = Node.AsDouble();
         }
-        else if(key_word_stop_.road_distances == key_word)
+        else if(road_distances == key_word)
         {
             for(const auto& [name_stop, dist] : Node.AsMap())
             {
@@ -122,42 +150,42 @@ void detail::Json_reader::TakeStopsInfo(const json::Dict& information_about_stop
                 throw std::logic_error("Not right structure in parsing Stop");
             }  catch (std::logic_error& error)
             {
-                std::cout << error.what() << "Look in data structure Stop. Address: json_reader -> TakeStopInfo" << std::endl;
+                std::cout << error.what() << "Look in data structure Stop. Address: JSONreader -> TakeStopInfo" << std::endl;
             }
             catch (...)
             {
-                std::cout << "Unknown error === Address: json_reader -> TakeStopInfo";
+                std::cout << "Unknown error === Address: JSONreader -> TakeStopInfo";
             }
         }
     }
-    catalogue.AddStop(stop.name_stop_, stop.coordinates_);
+    catalogue.AddStop(stop.name_stop_, stop.coordinates_); // std::move?
 }
 
-void detail::Json_reader::TakeBusesInfo(const json::Dict& information_about_bus, Catalogue::TransportCatalogue& catalogue)
+void detail::JSONreader::TakeBusesInfo(const json::Dict& information_about_bus, Catalogue::TransportCatalogue& catalogue)
 {
    BusIncludeNameStops temp;
    bool last_stop_equal_first = false;
    for(const auto& [key_word, Node] : information_about_bus)
    {
-       if(key_word_bus_.type == key_word)
+       if(type == key_word)
        {
            continue;
        }
-       else if(key_word_bus_.is_roundtrip == key_word)
+       else if(is_roundtrip == key_word)
        {
            continue;
        }
-       else if(key_word_bus_.name == key_word)
+       else if(name == key_word)
        {
             temp.name_bus_ = Node.AsString();
        }
-       else if(key_word_bus_.stops == key_word)
+       else if(stops == key_word)
        {
            for(const auto& name_stops : Node.AsArray())
            {
                temp.route_.push_back(name_stops.AsString()); // move?
            }
-           if(!information_about_bus.at(key_word_bus_.is_roundtrip).AsBool()) // По идее если не кольцевой то добавляем
+           if(!information_about_bus.at(is_roundtrip).AsBool()) // По идее если не кольцевой то добавляем
            {
                last_stop_equal_first = temp.route_.back() == temp.route_.front();
                 for(auto it = Node.AsArray().rbegin() + 1;  it != Node.AsArray().rend(); ++it)
@@ -173,19 +201,19 @@ void detail::Json_reader::TakeBusesInfo(const json::Dict& information_about_bus,
                throw std::logic_error("Not right structure in parsing Bus");
            }  catch (std::logic_error& error)
            {
-               std::cout << error.what() << "Look in data structure Bus. Address: json_reader -> TakeBusInfo" << std::endl;
+               std::cout << error.what() << "Look in data structure Bus. Address: JSONreader -> TakeBusInfo" << std::endl;
            }
            catch (...)
            {
-                std::cout << "Unknown error === Address: json_reader -> TakeBusInfo";
+                std::cout << "Unknown error === Address: JSONreader -> TakeBusInfo";
            }
        }
    }
-   catalogue.SetRoudtripRoute({temp.name_bus_, information_about_bus.at(key_word_bus_.is_roundtrip).AsBool()}, last_stop_equal_first);
+   catalogue.SetRoudtripRoute({temp.name_bus_, information_about_bus.at(is_roundtrip).AsBool()}, last_stop_equal_first);
    names_and_routes_.push_back(std::move(temp));
 }
 
-double detail::Json_reader::SetDistanceForBus(const BusIncludeNameStops& name_bus_and_route) const
+double detail::JSONreader::SetDistanceForBus(const BusIncludeNameStops& name_bus_and_route) const
 {
     double result = 0;
     for(size_t i = 0; i + 1 < name_bus_and_route.route_.size(); ++i)
@@ -210,90 +238,222 @@ double detail::Json_reader::SetDistanceForBus(const BusIncludeNameStops& name_bu
     return result;
 }
 
-void detail::Json_reader::LoadParametrsPicture(const json::Dict& information_about_picture, renderer::MapRenderer& map_renderer)
+void detail::JSONreader::LoadParametersPicture(const json::Dict& information_about_picture, renderer::MapRenderer& map_renderer)
 {
+    renderer::RenderOption renderrer_settings;
     for(const auto& [key_word, value] : information_about_picture)
     {
-            if(key_word == key_word_picture_.width)
+            if(key_word == width)
             {
-                map_renderer.SetWidth(value.AsDouble());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                    renderrer_settings.general_picture.width_ = value.AsDouble();
+                }
             }
-            else if(key_word == key_word_picture_.height)
+            else if(key_word == height)
             {
-                map_renderer.SetHeight(value.AsDouble());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                    renderrer_settings.general_picture.height_ = value.AsDouble();
+                }
             }
-            else if (key_word == key_word_picture_.padding)
+            else if (key_word == padding)
             {
-                map_renderer.SetPanding(value.AsDouble());
+                if(value.AsDouble() > 0)
+                {
+                   renderrer_settings.general_picture.padding_ = value.AsDouble();
+                }
             }
-            else if(key_word == key_word_picture_.line_width)
+            else if(key_word == line_width)
             {
-                map_renderer.SetBusLineWidth(value.AsDouble());
-                map_renderer.SetStopLineWidth(value.AsDouble());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                    renderrer_settings.picture_bus.line_width_ = value.AsDouble();
+                    renderrer_settings.picture_stop.line_width_ = value.AsDouble();
+                }
             }
-            else if(key_word == key_word_picture_.stop_radius)
+            else if(key_word == stop_radius)
             {
-                map_renderer.SetRadius(value.AsDouble());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                    renderrer_settings.picture_stop.radius_ = value.AsDouble();
+                }
             }
-            else if(key_word == key_word_picture_.underlayer_width)
+            else if(key_word == underlayer_width)
             {
-                map_renderer.SetUnderlayerWidth(value.AsDouble());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                   renderrer_settings.general_picture.underlayer_width_ = value.AsDouble();
+                }
             }
-            else if(key_word == key_word_picture_.bus_label_font_size)
+            else if(key_word == bus_label_font_size)
             {
-                map_renderer.SetBusLabelFontSize(value.AsInt());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                   renderrer_settings.picture_bus.font_size_ = value.AsInt();
+                }
             }
-            else if(key_word == key_word_picture_.stop_label_font_size)
+            else if(key_word == stop_label_font_size)
             {
-                map_renderer.SetStopLabelFontSize(value.AsInt());
+                if(!CheckRangeValue(value.AsDouble()))
+                {
+                   renderrer_settings.picture_stop.font_size_ = value.AsInt();
+                }
             }
-            else if(key_word == key_word_picture_.bus_label_offset)
+            else if(key_word == bus_label_offset)
             {
-                map_renderer.SetBusLabelOffset(value.AsArray());
+                if(SetBusLabelOffset(value.AsArray()).has_value())
+                {
+                    renderrer_settings.picture_bus.offset_x_ = SetBusLabelOffset(value.AsArray()).value().first;
+                    renderrer_settings.picture_bus.offset_y_ = SetBusLabelOffset(value.AsArray()).value().second;
+                }
             }
-            else if(key_word == key_word_picture_.stop_label_offset)
+            else if(key_word == stop_label_offset)
             {
-                map_renderer.SetStopLabelOffset(value.AsArray());
+                if(SetStopLabelOffset(value.AsArray()).has_value())
+                {
+                    renderrer_settings.picture_stop.offset_x_ = SetStopLabelOffset(value.AsArray()).value().first;
+                    renderrer_settings.picture_stop.offset_y_ = SetStopLabelOffset(value.AsArray()).value().second;
+                }
             }
-            else if(key_word == key_word_picture_.underlayer_color)
+            else if(key_word == underlayer_color)
             {
-                map_renderer.SetUnderlayerColor(value);
+                renderrer_settings.general_picture.underlayer_color_ = SetUnderlayerColor(value);
             }
-            else if(key_word == key_word_picture_.color_palette)
+            else if(key_word == color_palette)
             {
-                 map_renderer.SetColorPalette(value);
+                 renderrer_settings.general_picture.color_palette_ = SetColorPalette(value);
             }
     }
-    if(map_renderer.GetPanding() > std::min(map_renderer.GetHeight(), map_renderer.GetWidth()) / 2) // Обработка Painding связано с тем, что инициализация происходит не по порядку
+    if(renderrer_settings.general_picture.padding_ > std::min(renderrer_settings.general_picture.height_, renderrer_settings.general_picture.width_) / 2) // Обработка Painding связано с тем, что инициализация происходит не по порядку
     {
-         map_renderer.SetPanding(std::min(map_renderer.GetHeight(), map_renderer.GetWidth()) / 2);
+         renderrer_settings.general_picture.padding_ = std::min(renderrer_settings.general_picture.height_, renderrer_settings.general_picture.width_) / 2;
     }
     for(auto element : names_and_routes_) // Как лучше перебирать в цикле если делаем move по ссылке или нет
     {
         map_renderer.AddNameBusesForDraw(std::move(element.name_bus_));
 
     }
+    map_renderer.SetSettingsMap(std::move(renderrer_settings));
     names_and_routes_.clear(); // Освобождаем за ненадобностью
 }
 
+std::optional<std::pair<double, double>> detail::JSONreader::SetBusLabelOffset(const json::Array& numbers_offset)
+{
+    std::pair<double, double> result;
+    uint16_t x = 0;
+    uint16_t y = 1;
+    if(numbers_offset.size() < 2 && (numbers_offset[x].AsDouble() < range_value_.start_offset && numbers_offset[y].AsDouble() > range_value_.end_offset))
+    {
+        return std::nullopt;
+    }
+    result.first = numbers_offset[x].AsDouble();
+    result.second = numbers_offset[y].AsDouble();
+    return result;
+}
+
+std::optional<std::pair<double, double>> detail::JSONreader::SetStopLabelOffset(const json::Array& numbers_offset)
+{
+    std::pair<double, double> result;
+    uint16_t x = 0;
+    uint16_t y = 1;
+    if(numbers_offset.size() < 2 && (numbers_offset[x].AsDouble() < range_value_.start_offset && numbers_offset[y].AsDouble() > range_value_.end_offset))
+    {
+        return std::nullopt;
+    }
+    result.first = numbers_offset[x].AsDouble();
+    result.second = numbers_offset[y].AsDouble();
+    return result;
+}
+
+svg::Color detail::JSONreader::SetUnderlayerColor(const json::Node& colors_parametrs)
+{
+    uint16_t elem_rgba_r = 0;
+    uint16_t elem_rgba_g = 1;
+    uint16_t elem_rgba_b = 2;
+    uint16_t elem_rgba_a = 3;
+    if(colors_parametrs.IsArray() && colors_parametrs.AsArray().size() == 3)
+    {
+        return svg::Color{svg::Rgb{static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_b].AsInt())}};
+    }
+    else if(colors_parametrs.IsArray() && colors_parametrs.AsArray().size() == 4)
+    {
+        return svg::Color{svg::Rgba{static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_b].AsInt()), colors_parametrs.AsArray()[elem_rgba_a].AsDouble()}};
+    }
+    else if(colors_parametrs.IsString())
+    {
+        return svg::Color{colors_parametrs.AsString()};
+    }
+    else
+    {
+        return svg::Color{};
+    }
+}
+
+std::vector<svg::Color> detail::JSONreader::SetColorPalette(const json::Node &colors_parametrs)
+{
+    std::vector<svg::Color> result;
+    uint16_t elem_rgba_r = 0;
+    uint16_t elem_rgba_g = 1;
+    uint16_t elem_rgba_b = 2;
+    uint16_t elem_rgba_a = 3;
+    if(colors_parametrs.IsArray()) // массив цветов, либо один
+    {
+        for(const json::Node& element : colors_parametrs.AsArray())
+        {
+            if(element.IsString())
+            {
+                result.push_back(svg::Color{element.AsString()});
+            }
+            else if(element.AsArray().size() == 3)
+            {
+                result.push_back(svg::Color{svg::Rgb{static_cast<uint8_t>(element.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_b].AsInt())}});
+            }
+            else if (element.AsArray().size() == 4)
+            {
+                 result.push_back(svg::Color{svg::Rgba{static_cast<uint8_t>(element.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_b].AsInt()), element.AsArray()[elem_rgba_a].AsDouble()}});
+            }
+            else
+            {
+                result.push_back(svg::Color{});
+            }
+        }
+    }
+    else if(colors_parametrs.IsString()) // Один цвет строка
+    {
+        result.push_back(svg::Color{colors_parametrs.AsString()});
+    }
+    return result;
+}
+
+bool detail::JSONreader::CheckRangeValue(double number) const
+{
+    if((number < range_value_.start_other_parametrs) && (range_value_.end_other_parametrs - number < 0))
+    {
+        return true;
+    }
+    return false;
+}
+
+
 // ====================== Вывод ==========================
 
-void detail::Json_reader::SetOutPutDataBase(const json::Array& array, const RequestHandler& fasad, std::ostream &output)
+void detail::JSONreader::SetOutPutDataBase(const json::Array& array, const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream &output)
 {
     for(const json::Node& element : array)
     {
         try
         {
             json::Dict bus_or_stop = element.AsMap(); // Один эл-т с Map для построения карты
-            if(bus_or_stop.find(key_word_bus_.type) != bus_or_stop.end() && bus_or_stop.at(key_word_bus_.type) == key_word_bus_.bus) // Нужно смотреть, что кидает at и делать try catch
+            if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == bus) // Нужно смотреть, что кидает at и делать try catch
             {
                 TakeBusInfoOut(bus_or_stop); // Думаем насчет move
             }
-            else if(bus_or_stop.find(key_word_stop_.type) != bus_or_stop.end() && bus_or_stop.at(key_word_stop_.type) == key_word_stop_.stop)
+            else if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == stop)
             {
                 TakeStopInfoOut(bus_or_stop); // Думаем насчет move
             }
-            else if(bus_or_stop.find(key_word_picture_.type) != bus_or_stop.end() && bus_or_stop.at(key_word_picture_.type) == key_word_picture_.map)
+            else if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == map)
             {
                 TakePictureInfoOut(bus_or_stop); // Это одноразово, поэтому имя переменной не менял
             }
@@ -301,32 +461,32 @@ void detail::Json_reader::SetOutPutDataBase(const json::Array& array, const Requ
         catch (std::out_of_range& error)
         {
              std::cout << error.what() << "In output data have place where key type or key words Bus and Stop abcent";
-             std::cout << "Look input data file. Adress: Json_reader -> SetOutPutDataBase" << std::endl;
+             std::cout << "Look input data file. Adress: JSONreader -> SetOutPutDataBase" << std::endl;
         }
         catch (...)
         {
-              std::cout << "Unknown error === Address: json_reader -> SetOutPutDataBase";
+              std::cout << "Unknown error === Address: JSONreader -> SetOutPutDataBase";
         }
     }
-    PrintResults(fasad, output);
+    PrintResults(catalogue, map_renderrer, output);
 }
 
-void detail::Json_reader::TakeBusInfoOut(const json::Dict& information_about_bus) // Можно сделать через for - временный объект и добавление (этот вариант короче), но менее наглядно
+void detail::JSONreader::TakeBusInfoOut(const json::Dict& information_about_bus) // Можно сделать через for - временный объект и добавление (этот вариант короче), но менее наглядно
 {
-    id_type_bus_or_stop_.push_back(detail::Json_reader::OutInfo{information_about_bus.at(key_word_bus_.id).AsInt(), information_about_bus.at(key_word_bus_.type).AsString(),information_about_bus.at(key_word_bus_.name).AsString()});
+    id_type_bus_or_stop_.push_back(detail::JSONreader::OutInfo{information_about_bus.at(id).AsInt(), information_about_bus.at(type).AsString(),information_about_bus.at(name).AsString()});
 }
 // Можно вообще убрать эти две функции, но решил вынести в отдельность, если в будущем будет меняться структура запроса было проще менять
-void detail::Json_reader::TakeStopInfoOut(const json::Dict& information_about_stop) // Можно сделать через for - временный объект и добавление (этот вариант короче), но менее наглядно
+void detail::JSONreader::TakeStopInfoOut(const json::Dict& information_about_stop) // Можно сделать через for - временный объект и добавление (этот вариант короче), но менее наглядно
 {
-    id_type_bus_or_stop_.push_back(detail::Json_reader::OutInfo{information_about_stop.at(key_word_stop_.id).AsInt(), information_about_stop.at(key_word_stop_.type).AsString(),information_about_stop.at(key_word_stop_.name).AsString()});
+    id_type_bus_or_stop_.push_back(detail::JSONreader::OutInfo{information_about_stop.at(id).AsInt(), information_about_stop.at(type).AsString(),information_about_stop.at(name).AsString()});
 }
 
-void detail::Json_reader::TakePictureInfoOut(const json::Dict &information_about_picture)
+void detail::JSONreader::TakePictureInfoOut(const json::Dict &information_about_picture)
 {
-    id_type_bus_or_stop_.push_back(detail::Json_reader::OutInfo{information_about_picture.at(key_word_picture_.id).AsInt(), information_about_picture.at(key_word_picture_.type).AsString(), ""});
+    id_type_bus_or_stop_.push_back(detail::JSONreader::OutInfo{information_about_picture.at(id).AsInt(), information_about_picture.at(type).AsString(), ""});
 }
 
-void detail::Json_reader::PrintResults(const RequestHandler& facade, std::ostream& out) const
+void detail::JSONreader::PrintResults(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream& out) const
 {
     using namespace std::literals;
     bool first = true;
@@ -335,17 +495,17 @@ void detail::Json_reader::PrintResults(const RequestHandler& facade, std::ostrea
     for(const auto& element : id_type_bus_or_stop_)
     {
         out << sign;
-        if(element.type == key_word_bus_.bus)
+        if(element.type == bus)
         {
-            PrintOutBus(facade, element.name, element.id, out);
+            PrintOutBus(catalogue, element.name, element.id, out);
         }
-        else if(element.type == key_word_stop_.stop)
+        else if(element.type == stop)
         {
-            PrintOutStop(facade, element.name, element.id, out);
+            PrintOutStop(catalogue, element.name, element.id, out);
         }
-        else if(element.type == key_word_picture_.map)
+        else if(element.type == map)
         {
-            PrintOutPicture(facade, element.id, out);
+            PrintOutPicture(map_renderrer, catalogue, element.id, out);
         }
         else
         {
@@ -358,7 +518,7 @@ void detail::Json_reader::PrintResults(const RequestHandler& facade, std::ostrea
             }
             catch (...)
             {
-                std::cout << "Unknown error === Address: json_reader -> SetOutPutDataBase"s;
+                std::cout << "Unknown error === Address: JSONreader -> SetOutPutDataBase"s;
             }
         }
         if(first)
@@ -370,9 +530,9 @@ void detail::Json_reader::PrintResults(const RequestHandler& facade, std::ostrea
         out << "\n]"s << std::endl;
 }
 
-void detail::Json_reader::PrintOutStop(const RequestHandler& facade, const std::string& name_stop, int32_t id, std::ostream& out) const
+void detail::JSONreader::PrintOutStop(const Catalogue::TransportCatalogue& catalogue, const std::string& name_stop, int32_t id, std::ostream& out) const
 {
-    const std::unique_ptr<std::set<std::string>> all_stops_in_request = facade.GetBusesByStop(name_stop);
+    const std::unique_ptr<std::set<std::string>> all_stops_in_request = catalogue.GetBusesByStop(name_stop);
     const std::string request_id = "request_id";
     const std::string buses = "buses";
     if(all_stops_in_request != nullptr)
@@ -393,16 +553,16 @@ void detail::Json_reader::PrintOutStop(const RequestHandler& facade, const std::
     }
 }
 
-void detail::Json_reader::PrintOutBus(const RequestHandler& facade, const std::string& name_bus, int32_t id, std::ostream& out) const
+void detail::JSONreader::PrintOutBus(const Catalogue::TransportCatalogue& catalogue, const std::string& name_bus, int32_t id, std::ostream& out) const
 {
     const std::string curvature = "curvature"; // words which need for print results, they will see in concole
     const std::string request_id = "request_id";
     const std::string route_length = "route_length";
     const std::string stop_count = "stop_count";
     const std::string unique_stop_count = "unique_stop_count";
-    if(facade.GetBusStatistics(name_bus).has_value())
+    if(catalogue.GetBusStatistics(name_bus).has_value())
     {
-        BusStatistics temp = facade.GetBusStatistics(name_bus).value();
+        BusStatistics temp = catalogue.GetBusStatistics(name_bus).value();
         json::Dict bus_parametrs;
         bus_parametrs[curvature] = temp.curvature_;
         bus_parametrs[request_id] = id;
@@ -417,7 +577,7 @@ void detail::Json_reader::PrintOutBus(const RequestHandler& facade, const std::s
     }
 }
 
-void detail::Json_reader::PrintEmptyRequest(int32_t id, std::ostream& out) const
+void detail::JSONreader::PrintEmptyRequest(int32_t id, std::ostream& out) const
 {
     const std::string req_id = "request_id";
     const std::string error_massage = "error_message";
@@ -428,13 +588,13 @@ void detail::Json_reader::PrintEmptyRequest(int32_t id, std::ostream& out) const
     json::Print(json::Document{empty_request}, out);
 }
 
-void detail::Json_reader::PrintOutPicture(const RequestHandler& facade, int32_t id, std::ostream& out) const
+void detail::JSONreader::PrintOutPicture(const renderer::MapRenderer& map_renderrer, const Catalogue::TransportCatalogue& catalogue, int32_t id, std::ostream& out) const
 {
     const std::string request_id = "request_id";
     const std::string map = "map";
     json::Dict picture_parametrs;
     std::ostringstream svg_str;
-    facade.RenderMap().Render(svg_str);
+    map_renderrer.RenderMap(catalogue).Render(svg_str);
     picture_parametrs[map] = svg_str.str();
     picture_parametrs[request_id] = id;
     json::Print(json::Document{picture_parametrs}, out);
