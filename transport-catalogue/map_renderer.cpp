@@ -1,245 +1,43 @@
-﻿#include "map_renderer.h"
+#include "map_renderer.h"
 
 // ======================= Установка параметров ==========================
 
-void renderer::MapRenderer::SetHeight(double height)
+void renderer::MapRenderer::SetSettingsMap(RenderOption settings)
 {
-    if(CheckRangeValue(height))
-    {
-        return;
-    }
-    general_picture_.height_ = height;
+    settings_renderrer_ = settings;
 }
-
-void renderer::MapRenderer::SetWidth(double width)
-{
-    if(CheckRangeValue(width))
-    {
-        return;
-    }
-    general_picture_.width_ = width;
-}
-
-void renderer::MapRenderer::SetPanding(double panding)   // ---------
-{
-    if(panding < 0)
-    {
-        return;
-    }
-    general_picture_.padding_ = panding;
-}
-
-void renderer::MapRenderer::SetUnderlayerWidth(double underlayer_width)
-{
-    if(CheckRangeValue(underlayer_width))
-    {
-        return;
-    }
-    general_picture_.underlayer_width_ = underlayer_width;
-}
-
-void renderer::MapRenderer::SetRadius(double radius)
-{
-    if(CheckRangeValue(radius))
-    {
-        return;
-    }
-    picture_stop_.radius_ = radius;
-}
-
-void renderer::MapRenderer::SetBusLineWidth(double line_width)
-{
-    if(CheckRangeValue(line_width))
-    {
-        return;
-    }
-    picture_bus_.line_width_ = line_width;
-}
-
-void renderer::MapRenderer::SetStopLineWidth(double line_width)
-{
-    if(CheckRangeValue(line_width))
-    {
-        return;
-    }
-    picture_stop_.line_width_ = line_width;
-}
-
-void renderer::MapRenderer::SetStopLabelFontSize(int32_t font_size)
-{
-    if(CheckRangeValue(font_size))
-    {
-        return;
-    }
-    picture_stop_.font_size_ = font_size;
-}
-
-void renderer::MapRenderer::SetBusLabelFontSize(int32_t font_size)
-{
-    if(CheckRangeValue(font_size))
-    {
-        return;
-    }
-    picture_bus_.font_size_ = font_size;
-}
-
-void renderer::MapRenderer::SetBusLabelOffset(const json::Array& numbers_offset)
-{
-    uint16_t x = 0;
-    uint16_t y = 1;
-    if(numbers_offset.size() < 2 && (numbers_offset[x].AsDouble() < range_value_.start_offset && numbers_offset[y].AsDouble() > range_value_.end_offset))
-    {
-        return;
-    }
-    picture_bus_.offset_x_ = numbers_offset[x].AsDouble();
-    picture_bus_.offset_y_ = numbers_offset[y].AsDouble();
-}
-
-void renderer::MapRenderer::SetStopLabelOffset(const json::Array& numbers_offset)
-{
-    uint16_t x = 0;
-    uint16_t y = 1;
-    if(numbers_offset.size() < 2 && (numbers_offset[x].AsDouble() < range_value_.start_offset && numbers_offset[y].AsDouble() > range_value_.end_offset))
-    {
-        return;
-    }
-    picture_stop_.offset_x_ = numbers_offset[x].AsDouble();
-    picture_stop_.offset_y_ = numbers_offset[y].AsDouble();
-}
-
-void renderer::MapRenderer::SetUnderlayerColor(const json::Node& colors_parametrs)
-{
-    uint16_t elem_rgba_r = 0;
-    uint16_t elem_rgba_g = 1;
-    uint16_t elem_rgba_b = 2;
-    uint16_t elem_rgba_a = 3;
-    if(colors_parametrs.IsArray() && colors_parametrs.AsArray().size() == 3)
-    {
-        general_picture_.underlayer_color_ = svg::Color{svg::Rgb{static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_b].AsInt())}};
-    }
-    else if(colors_parametrs.IsArray() && colors_parametrs.AsArray().size() == 4)
-    {
-        general_picture_.underlayer_color_ = svg::Color{svg::Rgba{static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(colors_parametrs.AsArray()[elem_rgba_b].AsInt()), colors_parametrs.AsArray()[elem_rgba_a].AsDouble()}};
-    }
-    else if(colors_parametrs.IsString())
-    {
-        general_picture_.underlayer_color_ = svg::Color{colors_parametrs.AsString()};
-    }
-    else
-    {
-        general_picture_.underlayer_color_ = svg::Color{};
-    }
-}
-
-void renderer::MapRenderer::SetColorPalette(const json::Node &colors_parametrs)
-{
-    uint16_t elem_rgba_r = 0;
-    uint16_t elem_rgba_g = 1;
-    uint16_t elem_rgba_b = 2;
-    uint16_t elem_rgba_a = 3;
-    if(colors_parametrs.IsArray()) // массив цветов, либо один
-    {
-        for(const json::Node& element : colors_parametrs.AsArray())
-        {
-            if(element.IsString())
-            {
-                general_picture_.color_palette_.push_back(svg::Color{element.AsString()});
-            }
-            else if(element.AsArray().size() == 3)
-            {
-                general_picture_.color_palette_.push_back(svg::Color{svg::Rgb{static_cast<uint8_t>(element.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_b].AsInt())}});
-            }
-            else if (element.AsArray().size() == 4)
-            {
-                 general_picture_.color_palette_.push_back(svg::Color{svg::Rgba{static_cast<uint8_t>(element.AsArray()[elem_rgba_r].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_g].AsInt()), static_cast<uint8_t>(element.AsArray()[elem_rgba_b].AsInt()), element.AsArray()[elem_rgba_a].AsDouble()}});
-            }
-            else
-            {
-                general_picture_.color_palette_.push_back(svg::Color{});
-            }
-        }
-    }
-    else if(colors_parametrs.IsString()) // Один цвет строка
-    {
-        general_picture_.color_palette_.push_back(svg::Color{colors_parametrs.AsString()});
-    }
-}
-
-// ======================= Возвращение параметров ==========================
-
-double renderer::MapRenderer::GetPanding() const
-{
-    return general_picture_.padding_;
-}
-
-double renderer::MapRenderer::GetHeight() const
-{
-    return general_picture_.height_;
-}
-
-double renderer::MapRenderer::GetWidth() const
-{
-    return general_picture_.width_;
-}
-
-double renderer::MapRenderer::GetStrokeWidthBuses() const
-{
-    return picture_bus_.line_width_;
-}
-
-double renderer::MapRenderer::GetStrokeWidthStops() const
-{
-    return picture_stop_.line_width_;
-}
-
-std::vector<svg::Color> renderer::MapRenderer::GetColorsPalette() const
-{
-    return general_picture_.color_palette_;
-}
-
-double renderer::MapRenderer::GetUnderlayerWidth() const
-{
-    return general_picture_.underlayer_width_;
-}
-
-svg::Color renderer::MapRenderer::GetUnderlayerColor() const
-{
-    return general_picture_.underlayer_color_;
-}
-
-const std::shared_ptr<std::set<std::string>> renderer::MapRenderer::GetNameBusesForDraw() const
-{
-    return std::make_shared<std::set<std::string>>(name_buses_);
-}
-
-uint32_t renderer::MapRenderer::GetFontSizeBus() const
-{
-   return picture_bus_.font_size_;
-}
-
-uint32_t renderer::MapRenderer::GetFontSizeStop() const
-{
-   return picture_stop_.font_size_;
-}
-
-std::pair<double, double> renderer::MapRenderer::GetOffsetStopXandY() const
-{
-    return {picture_stop_.offset_x_, picture_stop_.offset_y_};
-}
-
-std::pair<double, double> renderer::MapRenderer::GetOffsetBusXandY() const
-{
-    return {picture_bus_.offset_x_, picture_bus_.offset_y_};
-}
-
-double renderer::MapRenderer::GetRadius() const
-{
-    return picture_stop_.radius_;
-}
-
-
 
 // ======================= Ф-и построения картинки ==========================
+
+svg::Document renderer::MapRenderer::RenderMap(const Catalogue::TransportCatalogue& catalogue) const
+{
+    svg::Document doc;
+    CoordinatesSphereProjectorAndAllNamesStops name_bus_project_sphere_coords_and_stop_plus_coord = SetCoordinatesForBusesSphereProjectorAndStopCoord(catalogue);
+    if(name_bus_project_sphere_coords_and_stop_plus_coord.coordinates_sphere_projector.empty() || name_bus_project_sphere_coords_and_stop_plus_coord.name_stop_coordinate.empty())
+    {
+        return doc;
+    }
+    for(const auto& element : GetSettingRenderRoute(name_bus_project_sphere_coords_and_stop_plus_coord.coordinates_sphere_projector))
+    {
+        doc.Add(element);
+    }
+    for(const auto& element : GetSettingNamesBuses(name_bus_project_sphere_coords_and_stop_plus_coord.coordinates_sphere_projector, *catalogue.GetRoudtripRoute()))
+    {
+        doc.Add(element.underlayer_bus);
+        doc.Add(element.label_bus);
+    }
+    for(const auto& element : GetSettingsSymbolStops(name_bus_project_sphere_coords_and_stop_plus_coord.name_stop_coordinate))
+    {
+        doc.Add(element);
+    }
+    for(const auto& element : GetSettingNamesStops(name_bus_project_sphere_coords_and_stop_plus_coord.name_stop_coordinate))
+    {
+        doc.Add(element.underlayer_stop);
+        doc.Add(element.label_stop);
+    }
+    return doc;
+}
+
 
 std::vector<svg::Polyline> renderer::MapRenderer::GetSettingRenderRoute(const std::map<std::string, std::vector<svg::Point>>& sphere_coords) const
 {
@@ -255,12 +53,12 @@ std::vector<svg::Polyline> renderer::MapRenderer::GetSettingRenderRoute(const st
     }
     for(size_t i = 0, j = 0; i < result.size(); ++i, ++j) // Устанавливаем цвет
     {
-        if(j >= GetColorsPalette().size())
+        if(j >= settings_renderrer_.general_picture.color_palette_.size())
         {
             j = 0;
         }
-        result[i].SetStrokeColor(GetColorsPalette().at(j));
-        result[i].SetStrokeLineCap(svg::StrokeLineCap::ROUND).SetStrokeLineJoin(svg::StrokeLineJoin::ROUND).SetFillColor("none").SetStrokeWidth(GetStrokeWidthBuses());
+        result[i].SetStrokeColor(settings_renderrer_.general_picture.color_palette_.at(j));
+        result[i].SetStrokeLineCap(svg::StrokeLineCap::ROUND).SetStrokeLineJoin(svg::StrokeLineJoin::ROUND).SetFillColor("none").SetStrokeWidth(settings_renderrer_.picture_bus.line_width_);
     }
     return result;
 }
@@ -275,20 +73,20 @@ std::vector<renderer::PrinterNameBus> renderer::MapRenderer::GetSettingNamesBuse
         {
             continue;
         }
-        if(iterator_color >= GetColorsPalette().size())
+        if(iterator_color >= settings_renderrer_.general_picture.color_palette_.size())
         {
             iterator_color = 0;
         }
         PrinterNameBus temp;
         temp.underlayer_bus.SetStrokeLineCap(svg::StrokeLineCap::ROUND).SetStrokeLineJoin(svg::StrokeLineJoin::ROUND); // Доп параметры
-        temp.underlayer_bus.SetStrokeColor(GetUnderlayerColor()).SetFillColor(GetUnderlayerColor()).SetStrokeWidth(GetUnderlayerWidth());
+        temp.underlayer_bus.SetStrokeColor(settings_renderrer_.general_picture.underlayer_color_).SetFillColor(settings_renderrer_.general_picture.underlayer_color_).SetStrokeWidth(settings_renderrer_.general_picture.underlayer_width_);
 
-        temp.underlayer_bus.SetFontFamily("Verdana").SetFontSize(GetFontSizeBus()).SetFontWeight("bold");
-        temp.underlayer_bus.SetPosition(coords.front()).SetData(name_bus).SetOffset({GetOffsetBusXandY().first, GetOffsetBusXandY().second});
-        temp.label_bus.SetFontFamily("Verdana").SetFontSize(GetFontSizeBus()).SetFontWeight("bold");
-        temp.label_bus.SetPosition(coords.front()).SetData(name_bus).SetOffset({GetOffsetBusXandY().first, GetOffsetBusXandY().second});
+        temp.underlayer_bus.SetFontFamily("Verdana").SetFontSize(settings_renderrer_.picture_bus.font_size_).SetFontWeight("bold");
+        temp.underlayer_bus.SetPosition(coords.front()).SetData(name_bus).SetOffset({settings_renderrer_.picture_bus.offset_x_, settings_renderrer_.picture_bus.offset_y_});
+        temp.label_bus.SetFontFamily("Verdana").SetFontSize(settings_renderrer_.picture_bus.font_size_).SetFontWeight("bold");
+        temp.label_bus.SetPosition(coords.front()).SetData(name_bus).SetOffset({settings_renderrer_.picture_bus.offset_x_, settings_renderrer_.picture_bus.offset_y_});
 
-        temp.label_bus.SetFillColor(GetColorsPalette().at(iterator_color)); // Доп параметр
+        temp.label_bus.SetFillColor(settings_renderrer_.general_picture.color_palette_.at(iterator_color)); // Доп параметр
         result.push_back(temp);
         if(route_type.find(name_bus) != route_type.end() && !(route_type.at(name_bus).first)) // Для некольцевого маршрута
         {
@@ -312,7 +110,7 @@ std::vector<svg::Circle> renderer::MapRenderer::GetSettingsSymbolStops(const std
     for(const auto& [name_stop, coordinate] : name_stop_coordinate)
     {
         svg::Circle temp;
-        temp.SetCenter(coordinate).SetRadius(GetRadius()).SetFillColor("white");
+        temp.SetCenter(coordinate).SetRadius(settings_renderrer_.picture_stop.radius_).SetFillColor("white");
         result.push_back(std::move(temp));
     }
     return result;
@@ -324,13 +122,13 @@ std::vector<renderer::PrinterNameStop> renderer::MapRenderer::GetSettingNamesSto
     PrinterNameStop temp;
     for(const auto& [name_stop, coord] : name_stop_coordinate)
     {
-        temp.underlayer_stop.SetPosition(coord).SetOffset(svg::Point{GetOffsetStopXandY().first, GetOffsetStopXandY().second}); // Общие св-ва
-        temp.underlayer_stop.SetFontSize(GetFontSizeStop()).SetFontFamily("Verdana").SetData(static_cast<std::string>(name_stop));
-        temp.label_stop.SetPosition(coord).SetOffset(svg::Point{GetOffsetStopXandY().first, GetOffsetStopXandY().second});
-        temp.label_stop.SetFontSize(GetFontSizeStop()).SetFontFamily("Verdana").SetData(static_cast<std::string>(name_stop));
+        temp.underlayer_stop.SetPosition(coord).SetOffset(svg::Point{settings_renderrer_.picture_stop.offset_x_, settings_renderrer_.picture_stop.offset_y_}); // Общие св-ва
+        temp.underlayer_stop.SetFontSize(settings_renderrer_.picture_stop.font_size_).SetFontFamily("Verdana").SetData(name_stop);
+        temp.label_stop.SetPosition(coord).SetOffset(svg::Point{settings_renderrer_.picture_stop.offset_x_, settings_renderrer_.picture_stop.offset_y_});
+        temp.label_stop.SetFontSize(settings_renderrer_.picture_stop.font_size_).SetFontFamily("Verdana").SetData(name_stop);
 
         temp.underlayer_stop.SetStrokeLineCap(svg::StrokeLineCap::ROUND).SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
-        temp.underlayer_stop.SetStrokeColor(GetUnderlayerColor()).SetFillColor(GetUnderlayerColor()).SetStrokeWidth(GetUnderlayerWidth());
+        temp.underlayer_stop.SetStrokeColor(settings_renderrer_.general_picture.underlayer_color_).SetFillColor(settings_renderrer_.general_picture.underlayer_color_).SetStrokeWidth(settings_renderrer_.general_picture.underlayer_width_);
 
         temp.label_stop.SetFillColor("black");
         result.push_back(std::move(temp));
@@ -339,15 +137,6 @@ std::vector<renderer::PrinterNameStop> renderer::MapRenderer::GetSettingNamesSto
 }
 
 // =========================== Вспомогательные ф-и ==============================
-
-bool renderer::MapRenderer::CheckRangeValue(double number) const
-{
-    if((number < range_value_.start_other_parametrs) && (range_value_.end_other_parametrs - number < 0))
-    {
-        return true;
-    }
-    return false;
-}
 
 void renderer::MapRenderer::AddNameBusesForDraw(std::string name_bus)
 {
@@ -362,4 +151,47 @@ bool renderer::IsZero(double value)
 svg::Point renderer::SphereProjector::operator()(Coordinates coords) const
 {
     return {(coords.lng - min_lon_) * zoom_coeff_ + padding_,(max_lat_ - coords.lat) * zoom_coeff_ + padding_};
+}
+
+renderer::MapRenderer::CoordinatesSphereProjectorAndAllNamesStops renderer::MapRenderer::SetCoordinatesForBusesSphereProjectorAndStopCoord(const Catalogue::TransportCatalogue& catalogue) const
+{
+    CoordinatesSphereProjectorAndAllNamesStops result;
+    if(name_buses_.empty())
+    {
+        return {};
+    }
+    std::deque<Coordinates> geo_coords;
+    std::vector<svg::Point> sphere_coords;
+    std::vector<size_t> count_stops;
+    for(const auto& name_bus : name_buses_)
+    {
+        const Bus* bus = catalogue.FindBus(name_bus);
+        count_stops.push_back(bus->stops_in_route_.size());
+        for(const Stop* stop : bus->stops_in_route_)
+        {
+            geo_coords.push_back(stop->coordinates_);
+        }
+    }
+    const renderer::SphereProjector proj(geo_coords.begin(), geo_coords.end(), settings_renderrer_.general_picture.width_, settings_renderrer_.general_picture.height_, settings_renderrer_.general_picture.padding_); // Задаем проекцию
+    for(const auto& geo_coord : geo_coords)
+    {
+          const svg::Point screen_coord = proj(geo_coord);
+          sphere_coords.push_back(screen_coord);
+     }
+        size_t iterator_count_stops = 0;
+        size_t position = 0;
+        for(const auto& name_bus : name_buses_)
+        {
+            std::vector<svg::Point> coords_for_add;
+            const Bus* bus = catalogue.FindBus(name_bus);
+            for(size_t i = 0; i < count_stops[iterator_count_stops]; ++i, ++position)
+            {
+                result.name_stop_coordinate[bus->stops_in_route_.at(i)->name_stop_] = sphere_coords.at(position);
+                coords_for_add.push_back(sphere_coords[position]);
+            }
+            result.coordinates_sphere_projector[name_bus] = coords_for_add;
+            coords_for_add.clear();
+            ++iterator_count_stops;
+        }
+    return result;
 }
