@@ -5,9 +5,10 @@
 #include <sstream>
 
 #include "json.h"
-#include "request_handler.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
+#include "json_builder.h"
+#include "transport_router.h"
 
 namespace detail
 {
@@ -18,9 +19,10 @@ public:
     JSONreader() = delete; // В тестой версии можно убрать delete
     JSONreader(json::Document requests);
 
-    void SetInputRequests(Catalogue::TransportCatalogue &catalogue, std::string key_input);
-    void SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::string key_output ,std::ostream& output);
+    void SetInputRequests(Catalogue::TransportCatalogue &catalogue, const std::string& key_input);
+    void SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const std::string& key_output ,std::ostream& output);
     void SetInputParametersPicture(renderer::MapRenderer& map_renderer,  const std::string& key_input);
+    void SetInputParametrsRoute(Route::TransportRouter &router, const std::string& key_input);
 private:
 
     struct HasherDistStop
@@ -39,9 +41,17 @@ private:
         explicit OutInfo(int32_t id_, std::string type_, std::string name_)
             : id(id_), type(type_), name(name_)
         {}
-        int32_t id;
-        std::string type;
-        std::string name;
+        explicit OutInfo(int32_t id_, std::string type_, std::string from_, std::string to_)
+                : id(id_),
+                  type(type_),
+                  from(from_),
+                  to(to_)
+        {}
+        int32_t id = 0;
+        std::string type ="";
+        std::string name = "";
+        std::string from = "";
+        std::string to = "";
     };
 
     struct RangeValue
@@ -65,7 +75,8 @@ private:
    void TakeStopsInfo(const json::Dict& information_about_stop, Catalogue::TransportCatalogue& catalogue);
    void TakeBusesInfo(const json::Dict& information_about_bus, Catalogue::TransportCatalogue& catalogue);
    double SetDistanceForBus(const BusIncludeNameStops& name_bus_and_route) const;
-   void LoadParametersPicture(const json::Dict& information_about_picture, renderer::MapRenderer &map_renderer);
+   void SetParametersPicture(const json::Dict& information_about_picture, renderer::MapRenderer &map_renderer);
+   void SetPatametrsRoute(const json::Dict& information_about_picture, Route::TransportRouter& router);
    bool CheckRangeValue(double number) const;
    std::optional<std::pair<double, double>> SetStopLabelOffset(const json::Array& numbers_offset);
    std::optional<std::pair<double, double>> SetBusLabelOffset(const json::Array& numbers_offset);
@@ -73,18 +84,23 @@ private:
    std::vector<svg::Color> SetColorPalette(const json::Node& colors_parametrs);
    // --
 
-// -- Вывод
-   std::deque<OutInfo> id_type_bus_or_stop_; // Есть один элемент для построения карты (ключ Map)
+// -- Вывод  (Для хранения запросов на вывод существует альтернативный подход в хранении 2 векторов двух типов данных и сортировки по выводу id) вместо одного дека (один дек просто хранит лишние поля в структуре, вопрос выйгрыша зав. от запроса)
+   std::deque<OutInfo> id_type_bus_or_stop_; // Есть один элемент для построения карты (ключ Map) (Новое добаленное - изменили добавили в струкруту эл-ты запроса route)
+//   std::deque<OutInfoRoute> from_id_to_type_; // Новое добавленное (подлежит удалению)
 
    void SetOutPutDataBase(const json::Array &array, const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream& output);
    void TakeStopInfoOut(const json::Dict& information_about_stop);
    void TakeBusInfoOut(const json::Dict& information_about_bus);
    void TakePictureInfoOut(const json::Dict& information_about_picture);
+   void TakeRouteInfoOut(const json::Dict& information_about_route); // Новое добавлено
    void PrintResults(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream& out) const;
    void PrintOutBus(const Catalogue::TransportCatalogue& catalogue, const std::string& name_bus, int32_t id, std::ostream& out) const;
    void PrintOutStop(const Catalogue::TransportCatalogue& catalogue, const std::string& name_stop, int32_t id, std::ostream& out) const;
    void PrintOutPicture(const renderer::MapRenderer& map_renderrer, const Catalogue::TransportCatalogue& catalogue, int32_t id, std::ostream& out) const;
    void PrintEmptyRequest(int32_t id, std::ostream& out) const;
+   void PrintOutRouter() const;
+   void PrintItemsWait() const;
+   void PrintItemsBus() const;
 
    json::Document requests_;
 };
