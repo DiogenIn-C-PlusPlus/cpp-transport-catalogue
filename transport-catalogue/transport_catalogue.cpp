@@ -56,6 +56,11 @@ const std::unique_ptr<std::set<std::string>> Catalogue::TransportCatalogue::GetB
     return std::make_unique<std::set<std::string>>(temp->second);
 }
 
+const std::deque<Stop> &Catalogue::TransportCatalogue::GetAllStops() const
+{
+    return stops_;
+}
+
 double Catalogue::TransportCatalogue::DistanceInRouteGeo(std::string_view request) const
 {
     double dist_in_route = 0;
@@ -85,7 +90,7 @@ double Catalogue::TransportCatalogue::GetDistanceFromRequests(std::string_view r
     return bus_name_and_dist_.at(request);
 }
 
-void Catalogue::TransportCatalogue::SetRoudtripRoute(std::pair<std::string, bool> name_answer, bool first_last_stop)
+void Catalogue::TransportCatalogue::SetRoundtripRoute(std::pair<std::string, bool> name_answer, bool first_last_stop)
 {
     check_roudtrip_bus_and_equal_first_last_stop[name_answer.first] = std::pair<bool, bool>(name_answer.second, first_last_stop);
 }
@@ -124,4 +129,9 @@ const std::unique_ptr<std::set<std::string>> Catalogue::TransportCatalogue::GetB
         return  std::make_unique<std::set<std::string>>(empty_object);
     }
     return GetBusesEnterInRoute(FindStop(stop_name));
+}
+
+const std::deque<Bus>& Catalogue::TransportCatalogue::GetAllBuses() const
+{
+    return buses_;
 }
