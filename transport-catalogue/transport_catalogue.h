@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
 
 #include "domain.h"
 #include "geo.h"
@@ -31,11 +32,12 @@ private:
     double GetDistanceFromRequests(std::string_view request) const;
     const std::unique_ptr<std::set<std::string>> GetBusesEnterInRoute(const Stop* stop) const;
 public:
-
+    const std::deque<Stop> &GetAllStops() const;
+    const std::deque<Bus>& GetAllBuses() const;
     const std::unique_ptr<std::set<std::string>> GetBusesByStop(const std::string_view& stop_name) const;
     std::optional<BusStatistics> GetBusStatistics(const std::string_view& request) const;
     const std::unique_ptr<std::unordered_map<std::string, std::pair<bool, bool>>> GetRoudtripRoute() const;
-    void SetRoudtripRoute(std::pair<std::string, bool> name_answer, bool first_last_stop);
+    void SetRoundtripRoute(std::pair<std::string, bool> name_answer, bool first_last_stop);
     void AddStop(const std::string& name_stop, Coordinates coordinates);
     const Stop* FindStop(std::string_view name_stop) const;
     void AddBus(std::string name_bus, const std::vector<std::string> &route, double distance);
