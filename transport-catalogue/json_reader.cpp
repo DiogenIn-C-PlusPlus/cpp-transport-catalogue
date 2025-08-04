@@ -6,6 +6,11 @@
 // Перенес в виде константы статической, мне компилятор выдает предупреждение non-POD, я прочитал это больше относится к библиотекам
 // мол, что это может привести к лишней трате ресурсов и при этом не использовано (Дают совет, просто изменить настройки компилятора)
 
+
+  static const std::string key_base = "base_requests";
+  static const std::string key_statats = "stat_requests";
+  static const std::string key_picture = "render_settings";
+  static const std::string key_router = "routing_settings";
   static const std::string stop = "Stop";
   static const std::string type = "type";
   static const std::string name = "name";
@@ -29,17 +34,22 @@
   static const std::string underlayer_width = "underlayer_width";
   static const std::string color_palette  = "color_palette";
   static const std::string map = "Map";
+  static const std::string route = "Route";
+  static const std::string from = "from";
+  static const std::string to = "to";
+  static const std::string bus_wait_time = "bus_wait_time";
+  static const std::string bus_velocity = "bus_velocity";
 
 detail::JSONreader::JSONreader(json::Document doc)
     : requests_(doc.GetRoot())
     {}
 
 
-void detail::JSONreader::SetInputRequests(Catalogue::TransportCatalogue& catalogue, std::string key_input)
+void detail::JSONreader::SetInputRequests(Catalogue::TransportCatalogue& catalogue, const std::string& key_input)
 {
     try
     {
-        if(key_input != "base_requests")
+        if(key_input != key_base)
         {
             throw std::logic_error("Not right keys for load in data base");
         }
@@ -50,11 +60,11 @@ void detail::JSONreader::SetInputRequests(Catalogue::TransportCatalogue& catalog
     SetInputDataBase(requests_.GetRoot().AsMap().at(key_input).AsArray(), catalogue);
 }
 
-void detail::JSONreader::SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const std::string key_output, std::ostream &output)
+void detail::JSONreader::SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const Route::TransportRouter& route, const std::string& key_output, std::ostream &output)
 {
     try
     {
-        if(key_output != "stat_requests")
+        if(key_output != key_statats)
         {
             throw std::logic_error("Not right keys for load in data base");
         }
@@ -62,14 +72,14 @@ void detail::JSONreader::SetOutputRequests(const Catalogue::TransportCatalogue& 
     {
         std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" == Address: JSONreader -> SetOutPutRequests" <<std::endl;
     }
-    SetOutPutDataBase(requests_.GetRoot().AsMap().at(key_output).AsArray(), catalogue , map_renderrer, output);
+    SetOutPutDataBase(requests_.GetRoot().AsMap().at(key_output).AsArray(), catalogue , map_renderrer, route, output);
 }
 
 void detail::JSONreader::SetInputParametersPicture(renderer::MapRenderer& map_renderer, const std::string& key_input)
 {
     try
     {
-        if(key_input != "render_settings")
+        if(key_input != key_picture)
         {
             throw std::logic_error("Not right keys for load in data base");
         }
@@ -77,7 +87,22 @@ void detail::JSONreader::SetInputParametersPicture(renderer::MapRenderer& map_re
     {
         std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" or \"render_settings\" == Address: JSONreader -> SetInputParametrsPicture" << std::endl;
     }
-    LoadParametersPicture(requests_.GetRoot().AsMap().at(key_input).AsMap(), map_renderer);
+    SetParametersPicture(requests_.GetRoot().AsMap().at(key_input).AsMap(), map_renderer);
+}
+
+void detail::JSONreader::SetInputParametrsRoute(Route::TransportRouter& router, const std::string& key_input)
+{
+    try
+    {
+        if(key_input != key_router)
+        {
+            throw std::logic_error("Not right keys for load in data base");
+        }
+    }  catch (std::logic_error& error)
+    {
+        std::cout << error.what() << "\t Look correct you \"key_input\" and \"key_output\" or \"key_router\" == Address: JSONreader -> SetInputParametrsRoute" << std::endl;
+    }
+    SetPatametrsRoute(requests_.GetRoot().AsMap().at(key_input).AsMap(), router);
 }
 
 // =================  Ввод =========================
@@ -209,7 +234,7 @@ void detail::JSONreader::TakeBusesInfo(const json::Dict& information_about_bus, 
            }
        }
    }
-   catalogue.SetRoudtripRoute({temp.name_bus_, information_about_bus.at(is_roundtrip).AsBool()}, last_stop_equal_first);
+   catalogue.SetRoundtripRoute({temp.name_bus_, information_about_bus.at(is_roundtrip).AsBool()}, last_stop_equal_first);
    names_and_routes_.push_back(std::move(temp));
 }
 
@@ -238,9 +263,9 @@ double detail::JSONreader::SetDistanceForBus(const BusIncludeNameStops& name_bus
     return result;
 }
 
-void detail::JSONreader::LoadParametersPicture(const json::Dict& information_about_picture, renderer::MapRenderer& map_renderer)
+void detail::JSONreader::SetParametersPicture(const json::Dict& information_about_picture, renderer::MapRenderer& map_renderer)
 {
-    renderer::RenderOption renderrer_settings;
+    renderer::RenderOptions renderrer_settings;
     for(const auto& [key_word, value] : information_about_picture)
     {
             if(key_word == width)
@@ -336,6 +361,24 @@ void detail::JSONreader::LoadParametersPicture(const json::Dict& information_abo
     }
     map_renderer.SetSettingsMap(std::move(renderrer_settings));
     names_and_routes_.clear(); // Освобождаем за ненадобностью
+}
+
+void detail::JSONreader::SetPatametrsRoute(const json::Dict& information_about_picture, Route::TransportRouter& router)
+{
+    Route::RouteOptions options;
+    for(const auto& [key_word, value] : information_about_picture)
+    {
+        if(key_word == bus_wait_time)
+        {
+            options.bus_time_wait = value.AsInt();
+        }
+        else if(key_word == bus_velocity)
+        {
+            options.bus_velocity = value.AsDouble();
+        }
+    }
+    router.SetParametrsBusWaitTimeAndVelocity(options.bus_time_wait, options.bus_velocity);
+    router.BuildGraph();
 }
 
 std::optional<std::pair<double, double>> detail::JSONreader::SetBusLabelOffset(const json::Array& numbers_offset)
@@ -438,24 +481,28 @@ bool detail::JSONreader::CheckRangeValue(double number) const
 
 // ====================== Вывод ==========================
 
-void detail::JSONreader::SetOutPutDataBase(const json::Array& array, const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream &output)
+void detail::JSONreader::SetOutPutDataBase(const json::Array& array, const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const Route::TransportRouter& transport_route, std::ostream &output)
 {
     for(const json::Node& element : array)
     {
         try
-        {
-            json::Dict bus_or_stop = element.AsMap(); // Один эл-т с Map для построения карты
-            if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == bus) // Нужно смотреть, что кидает at и делать try catch
+        {          
+            json::Dict bus_or_stop_or_map_or_route = element.AsMap(); // Один эл-т с Map для построения карты
+            if(bus_or_stop_or_map_or_route.find(type) != bus_or_stop_or_map_or_route.end() && bus_or_stop_or_map_or_route.at(type) == bus) // Нужно смотреть, что кидает at и делать try catch
             {
-                TakeBusInfoOut(bus_or_stop); // Думаем насчет move
+                TakeBusInfoOut(bus_or_stop_or_map_or_route); // Думаем насчет move
             }
-            else if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == stop)
+            else if(bus_or_stop_or_map_or_route.find(type) != bus_or_stop_or_map_or_route.end() && bus_or_stop_or_map_or_route.at(type) == stop)
             {
-                TakeStopInfoOut(bus_or_stop); // Думаем насчет move
+                TakeStopInfoOut(bus_or_stop_or_map_or_route); // Думаем насчет move
             }
-            else if(bus_or_stop.find(type) != bus_or_stop.end() && bus_or_stop.at(type) == map)
+            else if(bus_or_stop_or_map_or_route.find(type) != bus_or_stop_or_map_or_route.end() && bus_or_stop_or_map_or_route.at(type) == map)
             {
-                TakePictureInfoOut(bus_or_stop); // Это одноразово, поэтому имя переменной не менял
+                TakePictureInfoOut(bus_or_stop_or_map_or_route); // Это одноразово
+            }
+            else if(bus_or_stop_or_map_or_route.find(type) != bus_or_stop_or_map_or_route.end() && bus_or_stop_or_map_or_route.at(type) == route) // Новое добавлено
+            {
+                TakeRouteInfoOut(bus_or_stop_or_map_or_route); // Думаем насчет move
             }
         }
         catch (std::out_of_range& error)
@@ -468,7 +515,7 @@ void detail::JSONreader::SetOutPutDataBase(const json::Array& array, const Catal
               std::cout << "Unknown error === Address: JSONreader -> SetOutPutDataBase";
         }
     }
-    PrintResults(catalogue, map_renderrer, output);
+    PrintResults(catalogue, map_renderrer, transport_route, output);
 }
 
 void detail::JSONreader::TakeBusInfoOut(const json::Dict& information_about_bus) // Можно сделать через for - временный объект и добавление (этот вариант короче), но менее наглядно
@@ -486,7 +533,12 @@ void detail::JSONreader::TakePictureInfoOut(const json::Dict &information_about_
     id_type_bus_or_stop_.push_back(detail::JSONreader::OutInfo{information_about_picture.at(id).AsInt(), information_about_picture.at(type).AsString(), ""});
 }
 
-void detail::JSONreader::PrintResults(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream& out) const
+void detail::JSONreader::TakeRouteInfoOut(const json::Dict &information_about_route) // Новое добавлено
+{
+    id_type_bus_or_stop_.push_back(detail::JSONreader::OutInfo{information_about_route.at(id).AsInt(), information_about_route.at(type).AsString(), information_about_route.at(from).AsString(), information_about_route.at(to).AsString()});
+}
+
+void detail::JSONreader::PrintResults(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const Route::TransportRouter& router,std::ostream& out) const
 {
     using namespace std::literals;
     bool first = true;
@@ -506,6 +558,10 @@ void detail::JSONreader::PrintResults(const Catalogue::TransportCatalogue& catal
         else if(element.type == map)
         {
             PrintOutPicture(map_renderrer, catalogue, element.id, out);
+        }
+        else if(element.type == route)
+        {
+            PrintOutRouter(router, element.from, element.to, element.id, out);
         }
         else
         {
@@ -598,4 +654,63 @@ void detail::JSONreader::PrintOutPicture(const renderer::MapRenderer& map_render
     picture_parametrs[map] = svg_str.str();
     picture_parametrs[request_id] = id;
     json::Print(json::Document{picture_parametrs}, out);
+}
+
+void detail::JSONreader::PrintOutRouter(const Route::TransportRouter& route, const std::string &from_stop, const std::string &to_stop, int32_t id, std::ostream &out) const
+{
+    auto vec = route.GetMinimumRouteInfo(from_stop, to_stop);
+    if(vec.has_value())
+    {
+        const std::string req_id = "request_id";
+        const std::string total_time = "total_time";
+        const std::string items_key = "items";
+        json::Dict route_parametrs;
+        route_parametrs[req_id] = id;
+        route_parametrs[total_time] = vec->front().total_time;
+        json::Array items;
+        for(const auto& elem : vec.value())
+        {
+          if(!elem.stop_name.empty())
+          {
+              items.emplace_back(PrintItemsWait(elem));
+          }
+          else if(!elem.bus_name.empty())
+          {
+             items.emplace_back(PrintItemsBus(elem));
+          }
+        }
+        route_parametrs[items_key] = items;
+        json::Print(json::Document{route_parametrs}, out);
+    }
+    else
+    {
+        PrintEmptyRequest(id, out);
+    }
+}
+
+json::Dict detail::JSONreader::PrintItemsWait(const Route::RouteOutputData& data) const
+{
+    const std::string type = "type";
+    const std::string stop_name = "stop_name";
+    const std::string time = "time";
+    const std::string wait = "Wait";
+    json::Dict result;
+    result[stop_name] = static_cast<std::string>(data.stop_name);
+    result[time] = data.edge_time;
+    result[type] = wait;
+    return result;
+}
+
+json::Dict detail::JSONreader::PrintItemsBus(const Route::RouteOutputData& data) const
+{
+    const std::string type = "type";
+    const std::string bus = "bus";
+    const std::string time = "time";
+    const std::string span_count = "span_count";
+    json::Dict result;
+    result[time] = data.edge_time;
+    result[bus] = static_cast<std::string>(data.bus_name);
+    result[type] = "Bus";
+    result[span_count] = data.span_count;
+    return result;
 }
