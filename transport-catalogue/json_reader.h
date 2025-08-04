@@ -20,7 +20,7 @@ public:
     JSONreader(json::Document requests);
 
     void SetInputRequests(Catalogue::TransportCatalogue &catalogue, const std::string& key_input);
-    void SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const std::string& key_output ,std::ostream& output);
+    void SetOutputRequests(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const Route::TransportRouter& route,const std::string& key_output ,std::ostream& output);
     void SetInputParametersPicture(renderer::MapRenderer& map_renderer,  const std::string& key_input);
     void SetInputParametrsRoute(Route::TransportRouter &router, const std::string& key_input);
 private:
@@ -88,19 +88,19 @@ private:
    std::deque<OutInfo> id_type_bus_or_stop_; // Есть один элемент для построения карты (ключ Map) (Новое добаленное - изменили добавили в струкруту эл-ты запроса route)
 //   std::deque<OutInfoRoute> from_id_to_type_; // Новое добавленное (подлежит удалению)
 
-   void SetOutPutDataBase(const json::Array &array, const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream& output);
+   void SetOutPutDataBase(const json::Array &array, const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const Route::TransportRouter& transport_route, std::ostream& output);
    void TakeStopInfoOut(const json::Dict& information_about_stop);
    void TakeBusInfoOut(const json::Dict& information_about_bus);
    void TakePictureInfoOut(const json::Dict& information_about_picture);
    void TakeRouteInfoOut(const json::Dict& information_about_route); // Новое добавлено
-   void PrintResults(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, std::ostream& out) const;
+   void PrintResults(const Catalogue::TransportCatalogue& catalogue, const renderer::MapRenderer& map_renderrer, const Route::TransportRouter &router, std::ostream& out) const;
    void PrintOutBus(const Catalogue::TransportCatalogue& catalogue, const std::string& name_bus, int32_t id, std::ostream& out) const;
    void PrintOutStop(const Catalogue::TransportCatalogue& catalogue, const std::string& name_stop, int32_t id, std::ostream& out) const;
    void PrintOutPicture(const renderer::MapRenderer& map_renderrer, const Catalogue::TransportCatalogue& catalogue, int32_t id, std::ostream& out) const;
    void PrintEmptyRequest(int32_t id, std::ostream& out) const;
-   void PrintOutRouter() const;
-   void PrintItemsWait() const;
-   void PrintItemsBus() const;
+   void PrintOutRouter(const Route::TransportRouter& route, const std::string& from_stop, const std::string& to_stop, int32_t id, std::ostream& out) const;
+   json::Dict PrintItemsWait(const Route::RouteOutputData &data) const;
+   json::Dict PrintItemsBus(const Route::RouteOutputData &data) const;
 
    json::Document requests_;
 };
